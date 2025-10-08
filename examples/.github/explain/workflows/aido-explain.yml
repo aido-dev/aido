@@ -1,4 +1,4 @@
-name: AIDO Explain (Reusable)
+name: Aido Explain (Reusable)
 
 on:
   workflow_call:
@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   aido-explain:
-    name: AIDO Explain
+    name: Aido Explain
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -34,7 +34,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies for AIDO explain
+      - name: Install dependencies for Aido explain
         run: |
           npm install openai@latest @octokit/rest @google/generative-ai @anthropic-ai/sdk
 
@@ -44,7 +44,7 @@ jobs:
           echo "{\"pull_request\":{\"number\": ${{ inputs.pr_number }}}}" > "$EVENT_FILE"
           echo "EVENT_FILE=$EVENT_FILE" >> $GITHUB_ENV
 
-      - name: Run AIDO Explain
+      - name: Run Aido Explain
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}

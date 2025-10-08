@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# AIDO Dispatch Workflow
+# Aido Dispatch Workflow
 # - Listens for new PR comments on pull requests and normalizes the first line.
 # - Routes supported "aido <command>" comments to reusable workflows via a small
 #   "dispatch" job that parses the comment and exposes an output named "command".
@@ -19,7 +19,7 @@
 #     • For forked PRs, repository secrets may be unavailable due to GitHub policy.
 # -----------------------------------------------------------------------------
 
-name: AIDO Dispatch
+name: Aido Dispatch
 
 on:
   issue_comment:
@@ -78,9 +78,9 @@ jobs:
             --repo "$REPOSITORY" \
             --body "🤖 Hi @$ACTOR, I’ve queued your aido $COMMAND request. You can follow progress here: $RUN_URL"
 
-  # Route 'aido review' to the AIDO Review reusable workflow
+  # Route 'aido review' to the Aido Review reusable workflow
   review:
-    name: AIDO Review
+    name: Aido Review
     needs: dispatch
     if: needs.dispatch.outputs.command == 'review'
     uses: ./.github/workflows/aido-review.yml
@@ -91,9 +91,9 @@ jobs:
     with:
       pr_number: ${{ github.event.issue.number }}
 
-  # Route 'aido summarize' (or 'aido sum' or 'aido summary') to the AIDO Summarize reusable workflow
+  # Route 'aido summarize' (or 'aido sum' or 'aido summary') to the Aido Summarize reusable workflow
   summarize:
-    name: AIDO Summarize
+    name: Aido Summarize
     needs: dispatch
     if: needs.dispatch.outputs.command == 'summarize'
     uses: ./.github/workflows/aido-summarize.yml
@@ -104,9 +104,9 @@ jobs:
     with:
       pr_number: ${{ github.event.issue.number }}
 
-  # Route 'aido explain' to the AIDO Explain reusable workflow
+  # Route 'aido explain' to the Aido Explain reusable workflow
   explain:
-    name: AIDO Explain
+    name: Aido Explain
     needs: dispatch
     if: needs.dispatch.outputs.command == 'explain'
     uses: ./.github/workflows/aido-explain.yml
@@ -117,9 +117,9 @@ jobs:
     with:
       pr_number: ${{ github.event.issue.number }}
 
-  # Route 'aido suggest' to the AIDO Suggest reusable workflow
+  # Route 'aido suggest' to the Aido Suggest reusable workflow
   suggest:
-    name: AIDO Suggest
+    name: Aido Suggest
     needs: dispatch
     if: needs.dispatch.outputs.command == 'suggest'
     uses: ./.github/workflows/aido-suggest.yml
@@ -132,7 +132,7 @@ jobs:
 
   # Route 'aido help' to a Help job that posts a high-level commands overview
   help:
-    name: AIDO Help
+    name: Aido Help
     needs: dispatch
     if: needs.dispatch.outputs.command == 'help'
     runs-on: ubuntu-latest
@@ -152,7 +152,7 @@ jobs:
           gh issue comment "$ISSUE_NUMBER" \
             --repo "$REPOSITORY" \
             --body "$(cat <<'EOF'
-          🧭 AIDO Help
+          🧭 Aido Help
 
           Available commands (comment these on a PR):
 
@@ -172,7 +172,7 @@ jobs:
             Post diagnostic details about parsing and routing to help troubleshoot dispatch.
 
           - aido config-check | aido check-config | aido cc
-            Validate AIDO configuration files and flag provider/model mismatches or missing fields.
+            Validate Aido configuration files and flag provider/model mismatches or missing fields.
 
           - aido help
             Prints this help message as inline comment.
@@ -183,7 +183,7 @@ jobs:
 
   # Route 'aido debug' to a Debug job that posts basic diagnostic details for troubleshooting
   debug:
-    name: AIDO Debug
+    name: Aido Debug
     needs: dispatch
     if: needs.dispatch.outputs.command == 'debug'
     runs-on: ubuntu-latest
@@ -227,7 +227,7 @@ jobs:
           gh issue comment "$ISSUE_NUMBER" \
             --repo "$REPOSITORY" \
             --body "$(cat <<'EOF'
-          🪲 AIDO Debug
+          🪲 Aido Debug
 
           Parsed details:
           EOF
@@ -263,7 +263,7 @@ jobs:
           )"
 
   debug-config:
-    name: AIDO Config Check
+    name: Aido Config Check
     needs: dispatch
     if: needs.dispatch.outputs.command == 'config-check'
     runs-on: ubuntu-latest
@@ -274,7 +274,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Validate AIDO configuration files
+      - name: Validate Aido configuration files
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -288,7 +288,7 @@ jobs:
           fi
 
           STATUS="ok"
-          REPORT="🧪 AIDO Config Check\n\n"
+          REPORT="🧪 Aido Config Check\n\n"
 
           warn() { REPORT="${REPORT}- [WARN] $1\n"; }
           error() { REPORT="${REPORT}- [ERROR] $1\n"; STATUS="fail"; }

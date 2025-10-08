@@ -1,4 +1,4 @@
-# AIDO Summarize Workflow & Config
+# Aido Summarize Workflow & Config
 
 ## Purpose
 The `aido-summarize.yml` workflow generates a stakeholder-facing, high-level summary of a pull request.
@@ -60,7 +60,7 @@ What it delivers (sections):
 
 ## Config Reference (`aido-summarize-config.json`)
 
-Defines how the **AIDO Summarize** workflow generates summaries for pull requests.
+Defines how the **Aido Summarize** workflow generates summaries for pull requests.
 Controls provider, model, tone, style, included PR context, and output length.
 
 ### Fields

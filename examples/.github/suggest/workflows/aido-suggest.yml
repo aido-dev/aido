@@ -1,4 +1,4 @@
-name: AIDO Suggest (Reusable)
+name: Aido Suggest (Reusable)
 
 on:
   workflow_call:
@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   aido-suggest:
-    name: AIDO Suggest
+    name: Aido Suggest
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -34,7 +34,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies for AIDO suggest
+      - name: Install dependencies for Aido suggest
         run: |
           npm install openai@latest @octokit/rest @google/generative-ai @anthropic-ai/sdk
 
@@ -44,7 +44,7 @@ jobs:
           echo "{\"pull_request\":{\"number\": ${{ inputs.pr_number }}}}" > "$EVENT_FILE"
           echo "EVENT_FILE=$EVENT_FILE" >> $GITHUB_ENV
 
-      - name: Run AIDO Suggest
+      - name: Run Aido Suggest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}

@@ -1,4 +1,4 @@
-# AIDO Suggest Workflow & Config
+# Aido Suggest Workflow & Config
 
 ## Purpose
 The `aido-suggest.yml` workflow analyzes a pull request and proposes **concrete improvements and small, safe refactors**.
@@ -55,7 +55,7 @@ The result is posted as a PR comment with structured recommendations and code sn
 
 ## Config Reference (`aido-suggest-config.json`)
 
-Defines how the **AIDO Suggest** workflow generates actionable improvement suggestions.
+Defines how the **Aido Suggest** workflow generates actionable improvement suggestions.
 Controls provider, model, tone, style, included PR context, and guardrails.
 
 ### Fields

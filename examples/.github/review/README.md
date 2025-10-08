@@ -1,4 +1,4 @@
-# AIDO Review — Consolidated Reviewer
+# Aido Review — Consolidated Reviewer
 
 Single, high-quality PR review powered by one LLM call, guided by multiple personas. The review body stays clean (summary + persona notes + optional checks). All code edits are posted as inline, applyable suggestions.
 

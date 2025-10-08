@@ -1,7 +1,7 @@
-# AIDO Example Personas & Packs
+# Aido Example Personas & Packs
 
 ## Purpose
-This library provides **ready-to-use persona configurations** for the AIDO Review workflow.
+This library provides **ready-to-use persona configurations** for the Aido Review workflow.
 Personas represent different reviewer roles (e.g. security expert, performance reviewer, product owner).
 Each persona has its own **prompt, tone, and style** to guide the consolidated reviewer’s facets.
 Per‑persona provider/model are ignored in consolidated mode; set provider/model once in the top‑level `reviewer` block.
@@ -38,7 +38,7 @@ The goal is to help teams get **richer feedback** by combining perspectives, whi
 
 3. **Run the review**
    Comment `aido review` on a PR.
-   The AIDO workflow loads your personas and runs a single consolidated review (one LLM call) guided by those roles. Applyable code changes are posted as inline PR review suggestions only.
+   The Aido workflow loads your personas and runs a single consolidated review (one LLM call) guided by those roles. Applyable code changes are posted as inline PR review suggestions only.
 
 4. **Keep it reasonable**
    - **Use 3–5 personas.**

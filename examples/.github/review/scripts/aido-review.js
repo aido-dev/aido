@@ -1,5 +1,5 @@
 /**
- * AIDO Review Script
+ * Aido Review Script
  *
  * Consolidated, persona‑guided AI code review for GitHub PRs.
  *

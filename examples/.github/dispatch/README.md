@@ -1,4 +1,4 @@
-# AIDO Dispatch Workflow
+# Aido Dispatch Workflow
 
 ## Purpose
 The `aido-dispatch.yml` workflow listens for new **pull request comments**.
@@ -18,7 +18,7 @@ Supported commands include:
 Special commands:
 - **help** → posts available commands
 - **debug** → posts diagnostic details
-- **config-check** → validates AIDO config files
+- **config-check** → validates Aido config files
 
 ---
 

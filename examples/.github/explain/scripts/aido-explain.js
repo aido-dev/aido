@@ -1,5 +1,5 @@
 /**
- * AIDO Explain Script
+ * Aido Explain Script
  *
  * - Reads configuration from aido-explain-config.json (co-located)
  * - Builds PR context (title, body, files changed, and unified diff)
@@ -80,7 +80,7 @@ function loadConfig() {
       return merged;
     }
   } catch (e) {
-    console.error(`[AIDO Explain] Failed to read/parse ${CONFIG_FILENAME}:`, e.message || e);
+    console.error(`[Aido Explain] Failed to read/parse ${CONFIG_FILENAME}:`, e.message || e);
   }
   return DEFAULT_CONFIG;
 }
@@ -353,13 +353,13 @@ async function main() {
       owner,
       repo,
       prNumber,
-      `**[AIDO Explain ERROR]** Failed to generate explanation with provider '${provider}'.\n\nDetails: ${e.message || e}`,
+      `**[Aido Explain ERROR]** Failed to generate explanation with provider '${provider}'.\n\nDetails: ${e.message || e}`,
     );
     throw e;
   }
 
   // Post result (append provider/model footer)
-  const header = '## 📘 AIDO PR Explanation';
+  const header = '## 📘 Aido PR Explanation';
   const modelUsed =
     provider === 'CHATGPT'
       ? config.model?.CHATGPT || DEFAULT_CONFIG.model.CHATGPT
@@ -375,6 +375,6 @@ async function main() {
 
 // Execute
 main().catch((err) => {
-  console.error('[AIDO Explain] Fatal error:', err);
+  console.error('[Aido Explain] Fatal error:', err);
   process.exit(1);
 });

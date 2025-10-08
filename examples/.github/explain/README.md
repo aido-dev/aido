@@ -1,8 +1,8 @@
-# AIDO Explain Workflow & Config
+# Aido Explain Workflow & Config
 
 ## Purpose
-The `aido-explain.yml` workflow generates a **developer-focused, step-by-step explanation** of a pull request.  
-It collects PR context (title, description, changed files, diff), builds a step-by-step explanation prompt using the config, and generates content with a selected AI provider (ChatGPT, Gemini, or Claude).  
+The `aido-explain.yml` workflow generates a **developer-focused, step-by-step explanation** of a pull request.
+It collects PR context (title, description, changed files, diff), builds a step-by-step explanation prompt using the config, and generates content with a selected AI provider (ChatGPT, Gemini, or Claude).
 The result is posted back as a PR comment to help engineers understand intent, mechanics, and impact. It differs from Summarize, which targets stakeholders and avoids deep technical detail.
 
 ---
@@ -56,7 +56,7 @@ The result is posted back as a PR comment to help engineers understand intent, m
 
 ## Config Reference (`aido-explain-config.json`)
 
-Defines how the **AIDO Explain** workflow generates explanations for pull requests.  
+Defines how the **Aido Explain** workflow generates explanations for pull requests.
 Controls provider, model, tone, style, and included PR context.
 
 ### Fields
@@ -70,8 +70,8 @@ Controls provider, model, tone, style, and included PR context.
 - **include**: Flags to control included context:
   - `title`, `body`, `filesSummary`, `diff` (all boolean).
 - **additionalInstructions**: Freeform extra guidance appended to the prompt.
-- **promptTemplate**: Optional string template overriding the default prompt.  
-  - Placeholders: `{{language}}`, `{{tone}}`, `{{length}}`, `{{style}}`,  
+- **promptTemplate**: Optional string template overriding the default prompt.
+  - Placeholders: `{{language}}`, `{{tone}}`, `{{length}}`, `{{style}}`,
     `{{prTitle}}`, `{{prBody}}`, `{{filesSummary}}`, `{{diff}}`.
 
 ### Config Usage Notes
