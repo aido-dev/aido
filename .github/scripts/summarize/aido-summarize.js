@@ -1,5 +1,5 @@
 /**
- * AIDO Summarize Script
+ * Aido Summarize Script
  *
  * - Reads configuration from aido-summarize-config.json (co-located)
  * - Builds PR context (title, body, file changes, and diff)
@@ -83,7 +83,7 @@ function loadConfig() {
       return merged;
     }
   } catch (e) {
-    console.error(`[AIDO Summarize] Failed to read/parse ${CONFIG_FILENAME}:`, e.message || e);
+    console.error(`[Aido Summarize] Failed to read/parse ${CONFIG_FILENAME}:`, e.message || e);
   }
   return DEFAULT_CONFIG;
 }
@@ -371,13 +371,13 @@ async function main() {
       owner,
       repo,
       prNumber,
-      `**[AIDO Summarize ERROR]** Failed to generate summary with provider '${provider}'.\n\nDetails: ${e.message || e}`,
+      `**[Aido Summarize ERROR]** Failed to generate summary with provider '${provider}'.\n\nDetails: ${e.message || e}`,
     );
     throw e;
   }
 
   // Post summary (append provider/model footer)
-  const header = '## 📝 AIDO PR Summary';
+  const header = '## 📝 Aido PR Summary';
   const modelUsed =
     provider === 'CHATGPT'
       ? config.model?.CHATGPT || DEFAULT_CONFIG.model.CHATGPT
@@ -390,6 +390,6 @@ async function main() {
 
 // Execute
 main().catch((err) => {
-  console.error('[AIDO Summarize] Fatal error:', err);
+  console.error('[Aido Summarize] Fatal error:', err);
   process.exit(1);
 });

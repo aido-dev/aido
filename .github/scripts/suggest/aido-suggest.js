@@ -1,5 +1,5 @@
 /**
- * AIDO Suggest Script
+ * Aido Suggest Script
  *
  * Purpose:
  * - Analyze a PR and propose concrete improvements and small refactors.
@@ -86,7 +86,7 @@ function loadConfig() {
       };
     }
   } catch (e) {
-    console.error(`[AIDO Suggest] Failed to read/parse ${CONFIG_FILENAME}:`, e.message || e);
+    console.error(`[Aido Suggest] Failed to read/parse ${CONFIG_FILENAME}:`, e.message || e);
   }
   return DEFAULT_CONFIG;
 }
@@ -389,13 +389,13 @@ async function main() {
       owner,
       repo,
       prNumber,
-      `**[AIDO Suggest ERROR]** Failed to generate suggestions with provider '${provider}'.\n\nDetails: ${e.message || e}`,
+      `**[Aido Suggest ERROR]** Failed to generate suggestions with provider '${provider}'.\n\nDetails: ${e.message || e}`,
     );
     throw e;
   }
 
   // Post result
-  const header = '## ✨ AIDO Suggestions (Concrete improvements & small refactors)';
+  const header = '## ✨ Aido Suggestions (Concrete improvements & small refactors)';
   const safeSuggestions = sanitizeFences(suggestions);
   const modelUsed =
     provider === 'CHATGPT'
@@ -412,6 +412,6 @@ async function main() {
 
 // Execute
 main().catch((err) => {
-  console.error('[AIDO Suggest] Fatal error:', err);
+  console.error('[Aido Suggest] Fatal error:', err);
   process.exit(1);
 });
