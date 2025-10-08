@@ -1,6 +1,6 @@
-# aido Code of Conduct
+# Aido Code of Conduct
 
-We want the aido community to be a safe, collaborative place for contributors, users, and maintainers. This document sets expectations for conduct in all aido spaces (Issues, Pull Requests, Discussions, code reviews, and any project-related communication).
+We want the Aido community to be a safe, collaborative place for contributors, users, and maintainers. This document sets expectations for conduct in all Aido spaces (Issues, Pull Requests, Discussions, code reviews, and any project-related communication).
 
 ## Our Principles
 - Be respectful, inclusive, and considerate of different backgrounds and perspectives.
@@ -18,7 +18,7 @@ We want the aido community to be a safe, collaborative place for contributors, u
 - Any conduct that makes participation unsafe or hostile.
 
 ## Scope
-This Code applies within all aido project spaces and when representing the project in public. It covers maintainers, contributors, users, and anyone engaging with the project.
+This Code applies within all Aido project spaces and when representing the project in public. It covers maintainers, contributors, users, and anyone engaging with the project.
 
 ## Reporting Concerns
 If you experience or witness a Code of Conduct issue:
