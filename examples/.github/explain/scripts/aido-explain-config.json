@@ -1,0 +1,20 @@
+{
+  "provider": "GEMINI",
+  "model": {
+    "CHATGPT": "gpt-4o-mini",
+    "GEMINI": "gemini-2.5-flash",
+    "CLAUDE": "claude-3-5-sonnet-latest"
+  },
+  "language": "English",
+  "tone": "developer-focused, clear, pragmatic",
+  "length": "medium",
+  "style": "step-by-step",
+  "include": {
+    "title": true,
+    "body": true,
+    "filesSummary": true,
+    "diff": true
+  },
+  "additionalInstructions": "Audience: developers reviewing or onboarding to this PR. Use plain, precise language. Go deeper than a stakeholder summary: explain intent, mechanics, and implications. You may include very small, single-file code snippets only when essential to illustrate a point; otherwise avoid code blocks. Prefer references to file paths and functions over pasted code.",
+  "promptTemplate": "You are an experienced senior engineer and teacher. Produce a {{style}} explanation in {{language}} with a {{tone}} tone for a developer audience. Clarify differences from a stakeholder summary by focusing on how the change works, why specific decisions were made, and how to verify them.\\n\\nPR Title:\\n{{prTitle}}\\n\\nPR Description:\\n{{prBody}}\\n\\nFiles Changed:\\n{{filesSummary}}\\n\\nUnified Diff (truncated):\\n{{diff}}\\n\\nExplain using the following structure:\\n1) Intent: the problem being solved and high-level approach.\\n2) Walkthrough: key changes by file/module, mentioning important functions, data flows, and interfaces. Include tiny snippets only if essential.\\n3) Design choices: trade-offs, rejected alternatives, and rationale.\\n4) Risks and edge cases: failure modes, migration concerns, performance/security impact.\\n5) Verification: how to test manually and with automated tests (commands, areas of coverage).\\n6) Follow-ups: cleanup, refactors, or TODOs that should happen next.\\n\\nConstraints:\\n- Keep explanations developer-focused and actionable.\\n- Prefer pointers to files/lines over pasted code.\\n- If including a snippet is essential, keep it under ~5 lines and only one per point.\\n- Do not propose unrelated code changes.\\n\\nRespond only with the explanation."
+}

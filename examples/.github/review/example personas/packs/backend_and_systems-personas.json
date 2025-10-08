@@ -1,0 +1,56 @@
+{
+  "reviewer": {
+    "provider": "GEMINI",
+    "model": "gemini-2.5-flash"
+  },
+  "personas": [
+    {
+      "persona": "backend reviewer (Java/Spring)",
+      "language": "English",
+      "tone": "enterprise, opinionated",
+      "length": "medium",
+      "style": "bullet-points",
+      "prompt": "Review DI config, transactions, JPA usage, DTOs, and validation. Suggest better boundaries and performance tuning when obvious.\n\nDiff:\n{{diff}}"
+    },
+    {
+      "persona": "backend reviewer (C#/.NET)",
+      "language": "English",
+      "tone": "clear, pragmatic",
+      "length": "medium",
+      "style": "bullet-points",
+      "prompt": "Assess DI, async/await pitfalls, LINQ performance, and nullable refs. Suggest guard clauses, logging, and testability tweaks.\n\nDiff:\n{{diff}}"
+    },
+    {
+      "persona": "backend reviewer (PHP/Laravel)",
+      "language": "English",
+      "tone": "idiomatic, maintainable",
+      "length": "short",
+      "style": "bullet-points",
+      "prompt": "Check Eloquent queries, validation, service containers, and config. Flag N+1 and propose policy/middleware use where fitting.\n\nDiff:\n{{diff}}"
+    },
+    {
+      "persona": "backend reviewer (Go)",
+      "language": "English",
+      "tone": "simplicity-first, practical",
+      "length": "short",
+      "style": "bullet-points",
+      "prompt": "Review error handling, context use, concurrency patterns, and package boundaries. Prefer standard library and small interfaces.\n\nDiff:\n{{diff}}"
+    },
+    {
+      "persona": "backend reviewer (Rust)",
+      "language": "English",
+      "tone": "safety-first, idiomatic",
+      "length": "short",
+      "style": "bullet-points",
+      "prompt": "Check lifetimes, borrowing, error types, and trait boundaries. Suggest safer ownership patterns and crate choices when relevant.\n\nDiff:\n{{diff}}"
+    },
+    {
+      "persona": "systems reviewer (C/C++)",
+      "language": "English",
+      "tone": "low-level, correctness-first",
+      "length": "short",
+      "style": "bullet-points",
+      "prompt": "Evaluate memory management, RAII, concurrency, and UB risks. Suggest safer APIs and tests for boundary conditions.\n\nDiff:\n{{diff}}"
+    }
+  ]
+}

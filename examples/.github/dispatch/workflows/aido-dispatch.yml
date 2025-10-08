@@ -1,0 +1,411 @@
+# -----------------------------------------------------------------------------
+# AIDO Dispatch Workflow
+# - Listens for new PR comments on pull requests and normalizes the first line.
+# - Routes supported "aido <command>" comments to reusable workflows via a small
+#   "dispatch" job that parses the comment and exposes an output named "command".
+#   Downstream jobs use "needs: dispatch" for a cleaner Actions UI.
+# - Supported commands (and aliases):
+#     • aido review
+#     • aido summarize | aido sum | aido summary
+#     • aido explain
+#     • aido suggest | aido improve
+#     • aido config-check | aido check-config | aido cc
+#     • aido debug
+#     • aido debug --check-config | aido debug --cc | aido debug -cc
+#     • aido help
+# - Secrets are passed explicitly to called workflows for clarity (no inherit).
+# - Notes:
+#     • Only comments on PRs are routed (issue_comment event with a PR context).
+#     • For forked PRs, repository secrets may be unavailable due to GitHub policy.
+# -----------------------------------------------------------------------------
+
+name: AIDO Dispatch
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: read
+
+jobs:
+  dispatch:
+    name: Dispatch
+    if: github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    outputs:
+      command: ${{ steps.parse.outputs.command }}
+      normalized: ${{ steps.parse.outputs.normalized }}
+    steps:
+      - id: parse
+        run: |
+          body="${{ github.event.comment.body }}"
+          # Normalize: take first line, lowercase, collapse spaces, trim
+          first_line="$(printf "%s" "$body" | head -n1)"
+          norm="$(printf "%s" "$first_line" | tr '[:upper:]' '[:lower:]' | sed -E 's/[[:space:]]+/ /g; s/^ +//; s/ +$//')"
+          cmd=""
+          case "$norm" in
+            "aido review") cmd="review" ;;
+            "aido summarize"|"aido sum"|"aido summary") cmd="summarize" ;;
+            "aido explain") cmd="explain" ;;
+            "aido suggest"|"aido improve") cmd="suggest" ;;
+            "aido help") cmd="help" ;;
+            "aido config-check"|"aido check-config"|"aido cc") cmd="config-check" ;;
+            "aido debug") cmd="debug" ;;
+          esac
+          # Export both the parsed command and the normalized first line for downstream jobs
+          echo "command=$cmd" >> "$GITHUB_OUTPUT"
+          echo "normalized=$norm" >> "$GITHUB_OUTPUT"
+
+      # Post a quick acknowledgement so the requester sees immediate feedback.
+      # Only runs when a supported command was parsed, the comment is on a PR,
+      # and the command is not an internal command ('help' or 'debug').
+      - name: Acknowledge request
+        if: steps.parse.outputs.command != '' && steps.parse.outputs.command != 'help' && steps.parse.outputs.command != 'debug' && steps.parse.outputs.command != 'debug-config' && github.event.issue.pull_request
+        env:
+          # Standard token is sufficient for posting comments via GitHub CLI
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          COMMAND: ${{ steps.parse.outputs.command }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body "🤖 Hi @$ACTOR, I’ve queued your aido $COMMAND request. You can follow progress here: $RUN_URL"
+
+  # Route 'aido review' to the AIDO Review reusable workflow
+  review:
+    name: AIDO Review
+    needs: dispatch
+    if: needs.dispatch.outputs.command == 'review'
+    uses: ./.github/workflows/aido-review.yml
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+    with:
+      pr_number: ${{ github.event.issue.number }}
+
+  # Route 'aido summarize' (or 'aido sum' or 'aido summary') to the AIDO Summarize reusable workflow
+  summarize:
+    name: AIDO Summarize
+    needs: dispatch
+    if: needs.dispatch.outputs.command == 'summarize'
+    uses: ./.github/workflows/aido-summarize.yml
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+    with:
+      pr_number: ${{ github.event.issue.number }}
+
+  # Route 'aido explain' to the AIDO Explain reusable workflow
+  explain:
+    name: AIDO Explain
+    needs: dispatch
+    if: needs.dispatch.outputs.command == 'explain'
+    uses: ./.github/workflows/aido-explain.yml
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+    with:
+      pr_number: ${{ github.event.issue.number }}
+
+  # Route 'aido suggest' to the AIDO Suggest reusable workflow
+  suggest:
+    name: AIDO Suggest
+    needs: dispatch
+    if: needs.dispatch.outputs.command == 'suggest'
+    uses: ./.github/workflows/aido-suggest.yml
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+    with:
+      pr_number: ${{ github.event.issue.number }}
+
+  # Route 'aido help' to a Help job that posts a high-level commands overview
+  help:
+    name: AIDO Help
+    needs: dispatch
+    if: needs.dispatch.outputs.command == 'help'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Post help message
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body "$(cat <<'EOF'
+          🧭 AIDO Help
+
+          Available commands (comment these on a PR):
+
+          - aido review
+            Run multiple AI personas to review the PR, then produce a consolidated digest with suggested improvements.
+
+          - aido summarize | aido sum
+            Generate a high-level PR summary (configurable provider, language, tone, length).
+
+          - aido explain
+            Provide a pedagogical explanation of the changes (helps teammates understand intent and impact).
+
+          - aido suggest | aido improve
+            Propose concrete improvements and small, safe refactors with rationale and code examples.
+
+          - aido debug
+            Post diagnostic details about parsing and routing to help troubleshoot dispatch.
+
+          - aido config-check | aido check-config | aido cc
+            Validate AIDO configuration files and flag provider/model mismatches or missing fields.
+
+          - aido help
+            Prints this help message as inline comment.
+
+          You can follow the current run here:
+          EOF
+          )"$'\n'"$RUN_URL"
+
+  # Route 'aido debug' to a Debug job that posts basic diagnostic details for troubleshooting
+  debug:
+    name: AIDO Debug
+    needs: dispatch
+    if: needs.dispatch.outputs.command == 'debug'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Post debug details
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ACTOR: ${{ github.actor }}
+          COMMAND: ${{ needs.dispatch.outputs.command }}
+          NORMALIZED: ${{ needs.dispatch.outputs.normalized }}
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW: ${{ github.workflow }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          REPO_PRIVATE: ${{ github.event.repository.private }}
+          HAS_CHATGPT: ${{ secrets.CHATGPT_API_KEY != '' }}
+          HAS_GEMINI: ${{ secrets.GEMINI_API_KEY != '' }}
+          HAS_CLAUDE: ${{ secrets.CLAUDE_API_KEY != '' }}
+        run: |
+          # Derive owner/repo and PR number
+          OWNER="${REPOSITORY%/*}"
+          REPO="${REPOSITORY#*/}"
+          PR_NUMBER="$ISSUE_NUMBER"
+
+          # Query PR details via GitHub API (head/base repos and SHAs)
+          HEAD_REPO="$(gh api repos/$OWNER/$REPO/pulls/$PR_NUMBER --jq '.head.repo.full_name')"
+          BASE_REPO="$(gh api repos/$OWNER/$REPO/pulls/$PR_NUMBER --jq '.base.repo.full_name')"
+          HEAD_SHA="$(gh api repos/$OWNER/$REPO/pulls/$PR_NUMBER --jq '.head.sha')"
+          BASE_SHA="$(gh api repos/$OWNER/$REPO/pulls/$PR_NUMBER --jq '.base.sha')"
+          FROM_FORK="false"
+          if [ -n "$HEAD_REPO" ] && [ -n "$BASE_REPO" ] && [ "$HEAD_REPO" != "null" ] && [ "$BASE_REPO" != "null" ] && [ "$HEAD_REPO" != "$BASE_REPO" ]; then
+            FROM_FORK="true"
+          fi
+
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body "$(cat <<'EOF'
+          🪲 AIDO Debug
+
+          Parsed details:
+          EOF
+          )"$'\n'"$(cat <<EOF
+          Context:
+          - Actor: @$ACTOR
+          - Repository: $REPOSITORY
+          - Event: $EVENT_NAME
+          - Workflow: $WORKFLOW
+          - Run: $RUN_URL (attempt $RUN_ATTEMPT)
+          - Repo private: $REPO_PRIVATE
+          - Issue / PR: #$ISSUE_NUMBER
+
+          Pull request:
+          - Base repo: ${BASE_REPO:-unknown}
+          - Head repo: ${HEAD_REPO:-unknown}
+          - From fork: ${FROM_FORK}
+          - Base SHA: ${BASE_SHA:-unknown}
+          - Head SHA: ${HEAD_SHA:-unknown}
+
+          Parsed comment:
+          - Normalized first line: "$NORMALIZED"
+          - Parsed command: "$COMMAND"
+
+          Secrets presence:
+          - CHATGPT_API_KEY: $HAS_CHATGPT
+          - GEMINI_API_KEY: $HAS_GEMINI
+          - CLAUDE_API_KEY: $HAS_CLAUDE
+
+          Notes:
+          - On forked PRs, repository secrets may be unavailable due to GitHub policy.
+          EOF
+          )"
+
+  debug-config:
+    name: AIDO Config Check
+    needs: dispatch
+    if: needs.dispatch.outputs.command == 'config-check'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Validate AIDO configuration files
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          has_jq() { command -v jq >/dev/null 2>&1; }
+          if ! has_jq; then
+            echo "jq not found, attempting to install..."
+            sudo apt-get update -y && sudo apt-get install -y jq
+          fi
+
+          STATUS="ok"
+          REPORT="🧪 AIDO Config Check\n\n"
+
+          warn() { REPORT="${REPORT}- [WARN] $1\n"; }
+          error() { REPORT="${REPORT}- [ERROR] $1\n"; STATUS="fail"; }
+          okline() { REPORT="${REPORT}- [OK] $1\n"; }
+
+          provider_ok() {
+            case "$1" in
+              CHATGPT|GEMINI|CLAUDE) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          looks_like_model_for() {
+            PROV="$1"; MODL="$(echo "$2" | tr '[:upper:]' '[:lower:]')"
+            case "$PROV" in
+              CHATGPT) [[ "$MODL" == gpt* || "$MODL" == o* ]] ;;
+              GEMINI) [[ "$MODL" == gemini* ]] ;;
+              CLAUDE) [[ "$MODL" == claude* ]] ;;
+              *) return 1 ;;
+            esac
+          }
+
+          # Review config (supports new consolidated format and legacy array)
+          REVIEW_FILE=".github/scripts/review/aido-review-config.json"
+          if [[ -f "$REVIEW_FILE" ]]; then
+            TYPE="$(jq -r 'type' "$REVIEW_FILE" 2>/dev/null || echo '')"
+            if [[ "$TYPE" == "object" ]]; then
+              # New consolidated reviewer config: { reviewer: { provider, model }, personas: [...] }
+              HAS_REVIEWER="$(jq -r 'has("reviewer") and (.reviewer != null)' "$REVIEW_FILE" 2>/dev/null || echo false)"
+              if [[ "$HAS_REVIEWER" != "true" ]]; then
+                warn "Review: missing top-level .reviewer section; provider/model must be set at top-level"
+              fi
+              PROV=$(jq -r '.reviewer.provider // empty' "$REVIEW_FILE" | tr '[:lower:]' '[:upper:]')
+              MODL=$(jq -r '.reviewer.model // empty' "$REVIEW_FILE")
+              if ! provider_ok "$PROV"; then
+                warn "Review: unknown provider '$PROV' in $REVIEW_FILE"
+              else
+                if [[ -z "$MODL" ]]; then
+                  warn "Review: reviewer.model not set for provider $PROV in $REVIEW_FILE"
+                elif ! looks_like_model_for "$PROV" "$MODL"; then
+                  warn "Review: reviewer.model '$MODL' may not match provider '$PROV' in $REVIEW_FILE"
+                else
+                  okline "Review: reviewer provider/model look consistent ($PROV/$MODL)"
+                fi
+              fi
+              PCNT="$(jq '(.personas | length) // 0' "$REVIEW_FILE" 2>/dev/null || echo 0)"
+              if [[ "$PCNT" -gt 0 ]]; then
+                okline "Review: found $PCNT personas"
+                MISSING_NAMES=$(jq -r '[.personas[] | select((.persona // "") == "")] | length' "$REVIEW_FILE" 2>/dev/null || echo 0)
+                if [[ "$MISSING_NAMES" -gt 0 ]]; then
+                  warn "Review: $MISSING_NAMES personas missing 'persona' field"
+                fi
+                PPROV_COUNT=$(jq -r '[.personas[] | select((.provider // "") != "" or (.model // "") != "")] | length' "$REVIEW_FILE" 2>/dev/null || echo 0)
+                if [[ "$PPROV_COUNT" -gt 0 ]]; then
+                  warn "Review: $PPROV_COUNT personas include provider/model; remove per-persona provider/model and set them in .reviewer"
+                fi
+              else
+                warn "Review: no personas found (expect .personas array)"
+              fi
+            elif [[ "$TYPE" == "array" ]]; then
+              # Legacy format: array of personas (provider/model per persona or omitted)
+              COUNT="$(jq 'length' "$REVIEW_FILE" 2>/dev/null || echo 0)"
+              if [[ "$COUNT" -gt 0 ]]; then
+                okline "Review (legacy): found $COUNT personas in array format"
+                warn "Review: legacy array format detected; migrate to { reviewer, personas }"
+                MISSING_NAMES=$(jq -r '[.[] | select((.persona // "") == "")] | length' "$REVIEW_FILE" 2>/dev/null || echo 0)
+                if [[ "$MISSING_NAMES" -gt 0 ]]; then
+                  warn "Review (legacy): $MISSING_NAMES personas missing 'persona' field"
+                fi
+              else
+                warn "Review (legacy): no personas found in $REVIEW_FILE"
+              fi
+            else
+              warn "Review config at $REVIEW_FILE is neither object nor array"
+            fi
+          else
+            warn "Review config not found at $REVIEW_FILE"
+          fi
+
+          # Single-file configs to sanity-check
+          check_single_config() {
+            FILE="$1"; NAME="$2"
+            if [[ -f "$FILE" ]]; then
+              PROV=$(jq -r '.provider // empty' "$FILE" | tr '[:lower:]' '[:upper:]')
+              if ! provider_ok "$PROV"; then
+                warn "$NAME: unknown provider '$PROV' in $FILE"
+              else
+                case "$PROV" in
+                  CHATGPT) MODL=$(jq -r '.model.CHATGPT // empty' "$FILE") ;;
+                  GEMINI) MODL=$(jq -r '.model.GEMINI // empty' "$FILE") ;;
+                  CLAUDE) MODL=$(jq -r '.model.CLAUDE // empty' "$FILE") ;;
+                esac
+                if [[ -z "$MODL" ]]; then
+                  warn "$NAME: model not set for provider $PROV in $FILE"
+                elif ! looks_like_model_for "$PROV" "$MODL"; then
+                  warn "$NAME: model '$MODL' may not match provider '$PROV' in $FILE"
+                else
+                  okline "$NAME: provider/model look consistent ($PROV/$MODL)"
+                fi
+              fi
+            else
+              warn "$NAME config not found at $FILE"
+            fi
+          }
+
+          check_single_config ".github/scripts/summarize/aido-summarize-config.json" "Summarize"
+          check_single_config ".github/scripts/explain/aido-explain-config.json" "Explain"
+          check_single_config ".github/scripts/suggest/aido-suggest-config.json" "Suggest"
+
+          if [[ "$STATUS" == "ok" ]]; then
+            REPORT="${REPORT}\nNo blocking issues detected."
+          else
+            REPORT="${REPORT}\n\nRepository files under .github/scripts (maxdepth 3):\n\`\`\`\n$(find .github/scripts -maxdepth 3 -type f | sort 2>/dev/null)\n\`\`\`"
+          fi
+
+          echo -e "$REPORT" > /tmp/aido_config_report.md
+
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body "$(cat /tmp/aido_config_report.md)"

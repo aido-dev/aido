@@ -1,0 +1,54 @@
+name: AIDO Review (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        description: 'Pull request number to review'
+        required: true
+        type: number
+    secrets:
+      CHATGPT_API_KEY:
+        required: true
+      GEMINI_API_KEY:
+        required: false
+      CLAUDE_API_KEY:
+        required: false
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: read
+
+jobs:
+  aido-review:
+    name: AIDO Review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies for AIDO reviewers
+        run: |
+          npm install openai@latest @octokit/rest @google/generative-ai @anthropic-ai/sdk
+
+      - name: Create synthetic GitHub event (PR context)
+        run: |
+          EVENT_FILE="$RUNNER_TEMP/aido_event.json"
+          echo "{\"pull_request\":{\"number\": ${{ inputs.pr_number }}}}" > "$EVENT_FILE"
+          echo "EVENT_FILE=$EVENT_FILE" >> $GITHUB_ENV
+
+      - name: Run AIDO Multi-Reviewer
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          GITHUB_EVENT_PATH: ${{ env.EVENT_FILE }}
+        run: node .github/scripts/review/aido-review.js

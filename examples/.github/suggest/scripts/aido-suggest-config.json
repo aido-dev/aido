@@ -1,0 +1,22 @@
+{
+  "provider": "GEMINI",
+  "model": {
+    "CHATGPT": "gpt-4o-mini",
+    "GEMINI": "gemini-2.5-flash",
+    "CLAUDE": "claude-3-5-sonnet-latest"
+  },
+  "language": "English",
+  "tone": "constructive, pragmatic, professional",
+  "length": "medium",
+  "style": "bullet-points",
+  "include": {
+    "title": true,
+    "body": true,
+    "filesSummary": true,
+    "diff": true
+  },
+  "guardrails": "Focus on small, safe refactors and concrete improvements. Avoid large-scale rewrites unless trivially safe. Prefer clarity, maintainability, testability, and small performance wins. Respect existing patterns and conventions where reasonable.",
+  "deliverFormat": "Group suggestions by file when possible. For each suggestion: provide (1) a concise title, (2) a brief rationale, (3) concrete code changes in before/after or patch-like snippets, (4) estimated risk level (low/medium/high), (5) estimated effort (XS/S/M).",
+  "additionalInstructions": "Prefer standard patterns and idioms used in common ecosystems. Use clear code snippets. Avoid speculative or unverified claims.",
+  "promptTemplate": "You are an experienced senior engineer and code reviewer. In {{language}}, provide {{style}} suggestions with a {{tone}} tone.\n\nTarget length: {{length}}. Suggestions must be concrete and actionable.\n\nGuardrails:\n{{guardrails}}\n\nDeliver the output in this format:\n{{deliverFormat}}\n\nPR Title:\n{{prTitle}}\n\nPR Description:\n{{prBody}}\n\nFiles Changed:\n{{filesSummary}}\n\nUnified Diff (truncated):\n{{diff}}\n\nGuidance:\n- Prioritize clarity, maintainability, and testability.\n- Use idiomatic patterns.\n- Suggest small refactors, not sweeping rewrites, unless trivially safe.\n- Include short code snippets (before/after or patch-like) to illustrate the change.\n- Call out potential risks and effort realistically.\n- Avoid speculative or unverifiable claims.\n\nRespond only with the suggestions."
+}
