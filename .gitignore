@@ -1,0 +1,137 @@
+# =========================
+# Aido Project .gitignore
+# =========================
+# Purpose: Keep the repo clean and safe by excluding build artifacts, caches,
+# local environment files, secrets, and IDE/OS noise for a Node-based GitHub
+# Actions project with occasional Python content.
+
+# -------------------------
+# Node.js / Package Manager
+# -------------------------
+node_modules/
+**/node_modules/
+.github/**/node_modules/
+
+.npm/
+.npmrc
+.pnpm-store/
+
+# Lockfile policy: we use npm (package-lock.json stays tracked)
+yarn.lock
+pnpm-lock.yaml
+pnpm-lock.yml
+shrinkwrap.yaml
+shrinkwrap.yml
+# Keep npm's lockfile (tracked by default)
+#!package-lock.json
+
+# -------------------------
+# Logs / Reports / Coverage
+# -------------------------
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+*.log
+logs/
+log/
+debug.log
+
+coverage/
+.nyc_output/
+*.lcov
+reports/
+junit.xml
+junit/
+allure-results/
+
+# -------------------------
+# Build outputs / Caches
+# -------------------------
+dist/
+build/
+out/
+.tmp/
+.temp/
+.temp/**
+
+# Common tool caches
+.cache/
+.eslintcache
+.stylelintcache
+.parcel-cache/
+.rollup.cache/
+.turbo/
+.next/
+.svelte-kit/
+.vite/
+.esbuild/
+storybook-static/
+
+# TypeScript
+*.tsbuildinfo
+
+# -------------------------
+# Environment / Secrets
+# -------------------------
+.env
+.env.*
+!.env.example
+!.env.*.example
+.envrc
+
+# Common secrets/keys (never commit)
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_dsa
+id_ed25519
+
+# -------------------------
+# Editor / IDE
+# -------------------------
+.vscode/
+.vscode-test/
+.idea/
+*.iml
+*.sw?
+*.swp
+*.swo
+*.orig
+*.rej
+.history/
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# -------------------------
+# GitHub Actions / Aido
+# -------------------------
+# Local scratch/caches for scripts (if you create them)
+.aido/
+.github/**/.cache/
+.github/**/.tmp/
+
+# -------------------------
+# Python
+# -------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/

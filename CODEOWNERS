@@ -1,0 +1,15 @@
+# CODEOWNERS
+# Syntax: one pattern per line, followed by one or more owners.
+# Owners can be individuals or teams (e.g., @org/team).
+
+# Workflows and scripts (primary reviewers)
+.github/workflows/*      @dvirdung
+.github/scripts/**       @dvirdung
+
+# Issue/PR templates and repo meta
+.github/ISSUE_TEMPLATE/** @dvirdung
+.github/PULL_REQUEST_TEMPLATE.md @dvirdung
+
+# Docs
+README.md                @dvirdung
+examples/**              @dvirdung

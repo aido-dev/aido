@@ -1,0 +1,19 @@
+# .yamllint.yaml
+# -----------------------------------------------------------------------------
+# Custom yamllint configuration for this repository
+# -----------------------------------------------------------------------------
+# - Based on the default config, but with some rules relaxed for GitHub Actions.
+# - Disabled `truthy` → allows expressions like `if: always()`.
+# - Disabled `document-start` → no need to start every YAML file with '---'.
+# - Increased max line length to 120 → avoids warnings on workflow files with long commands.
+# -----------------------------------------------------------------------------
+
+extends: default
+
+rules:
+  truthy: disable
+  document-start: disable
+  line-length:
+    max: 160
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true

@@ -1,0 +1,214 @@
+# -----------------------------------------------------------------------------
+# Documentation:
+# - This workflow only runs linters and format checks on files changed in the PR.
+# - Supported filetypes for Prettier: js, ts, html, json, yml, yaml, sql
+# - ESLint runs only on changed JS/TS files.
+# - JSONLint runs only on changed JSON files.
+# - YAML Lint runs only on changed YAML/YML files.
+# - Python: Runs Black (format) and Flake8 (lint) only if .py files are changed.
+# - All steps output which files are checked, and will exit with an error if problems are found.
+# -----------------------------------------------------------------------------
+
+name: Lint and Format
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout repo
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Step 2: Cache node_modules for the isolated toolchain
+      - name: Cache node modules (lintpkg)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-cache-${{ hashFiles('.github/lintpkg/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-cache-
+
+      # Step 3: Install all linter/formatter deps from .github/lintpkg/
+      - name: Install dependencies (isolated lintpkg)
+        run: npm ci --prefix .github/lintpkg
+
+      # Step 4: Get changed files and detect python files (null-delimited)
+      - name: Get changed files (null-delimited) and detect Python
+        id: files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # --- Resolve base branch ---
+          BASE="${{ github.base_ref }}"
+          if [[ -z "$BASE" && -n "${{ github.event.repository.default_branch }}" ]]; then
+            BASE="${{ github.event.repository.default_branch }}"
+          fi
+          if [[ -z "$BASE" ]] && command -v gh >/dev/null; then
+            BASE="$(gh api repos/${{ github.repository }} -q .default_branch || true)"
+          fi
+          if [[ -z "$BASE" ]]; then
+            BASE="$(git symbolic-ref --short -q refs/remotes/origin/HEAD | sed 's|^origin/||' || true)"
+          fi
+          if [[ -z "$BASE" ]]; then BASE="main"; fi
+          echo "Base branch: $BASE"
+
+          # --- Ensure we have the base branch locally (no tags, shallow ok) ---
+          git fetch --no-tags --depth=1 origin "$BASE" || true
+
+          # --- All changed files (null-delimited) ---
+          git diff --name-only --diff-filter=d -z "origin/$BASE"...HEAD > changed_files.txt || true
+
+          # --- Python files (null-delimited) ---
+          git diff --name-only --diff-filter=d -z "origin/$BASE"...HEAD -- '*.py' > /tmp/python_files_to_check.txt || true
+
+          # --- Outputs: booleans + counts; keep lists on disk (NUL-safe) ---
+          py_count=$(tr -cd '\0' < /tmp/python_files_to_check.txt | wc -c | awk '{print $1}')
+
+          if [[ -s /tmp/python_files_to_check.txt ]]; then
+            echo "has_python_files=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_python_files=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "python_file_count=$py_count" >> "$GITHUB_OUTPUT"
+
+          # (Optional) also expose paths to the NUL-delimited lists for downstream steps
+          echo "python_list_path=/tmp/python_files_to_check.txt" >> "$GITHUB_OUTPUT"
+          echo "all_changed_path=$PWD/changed_files.txt" >> "$GITHUB_OUTPUT"
+
+      # Step 4.1: Split Python files into Python2/Python3 subsets
+      - name: Split Python files into Python2/Python3 subsets
+        if: steps.files.outputs.has_python_files == 'true'
+        id: split
+        shell: bash
+        run: |
+          set -euo pipefail
+          py2=/tmp/python2_files_to_check.txt
+          py3=/tmp/python3_files_to_check.txt
+          : > "$py2"; : > "$py3"
+          while IFS= read -r -d '' f; do
+            if grep -qE '^#!.*python2(\.[0-9]+)?' "$f"; then
+              printf "%s\0" "$f" >> "$py2"; continue
+            fi
+            if grep -qE '^[[:space:]]*print[[:space:]]+[^(\[{]' "$f"; then
+              printf "%s\0" "$f" >> "$py2"; continue
+            fi
+            if grep -qE '\b(xrange|raw_input|basestring|iteritems|itervalues)[[:space:]]*\(' "$f"; then
+              printf "%s\0" "$f" >> "$py2"; continue
+            fi
+            printf "%s\0" "$f" >> "$py3"
+          done < /tmp/python_files_to_check.txt
+          if [[ -s "$py2" ]]; then echo "has_python2_files=true" >> "$GITHUB_OUTPUT"; else echo "has_python2_files=false" >> "$GITHUB_OUTPUT"; fi
+          if [[ -s "$py3" ]]; then echo "has_python3_files=true" >> "$GITHUB_OUTPUT"; else echo "has_python3_files=false" >> "$GITHUB_OUTPUT"; fi
+          echo "python2_list_path=$py2" >> "$GITHUB_OUTPUT"
+          echo "python3_list_path=$py3" >> "$GITHUB_OUTPUT"
+
+      # Step 5: Prettier format check on changed files (from lintpkg toolchain)
+      - name: Prettier Format Check (changed files, with diff)
+        run: |
+          grep -zE '\.(js|ts|html|json|ya?ml|sql)$' changed_files.txt | \
+            xargs -0 --no-run-if-empty npx --yes --prefix .github/lintpkg prettier --check || (
+              echo -e "\n❌ Prettier found formatting issues! See the list below:\n"
+              grep -zE '\.(js|ts|html|json|ya?ml|sql)$' changed_files.txt | \
+                xargs -0 --no-run-if-empty npx --yes --prefix .github/lintpkg prettier --list-different
+              exit 1
+            )
+
+      # Step 6: ESLint on changed JS/TS files (from lintpkg toolchain)
+      - name: ESLint Check (changed JS/TS files)
+        run: |
+          grep -zE '\.(js|ts)$' changed_files.txt | \
+            xargs -0 --no-run-if-empty npx --yes --prefix .github/lintpkg eslint || (echo "❌ ESLint errors found!" && exit 1)
+
+      # Step 7: JSONLint on changed JSON files (from lintpkg toolchain)
+      - name: JSONLint Check (changed JSON files)
+        run: |
+          grep -zE '\.(json)$' changed_files.txt | \
+            xargs -0 --no-run-if-empty npx --yes --prefix .github/lintpkg jsonlint || (echo "❌ JSONLint errors found!" && exit 1)
+
+      # Step 8: YAML Lint on changed YAML/YML files (from lintpkg toolchain)
+      - name: YAML Lint Check (changed YAML/YML files)
+        run: |
+          grep -zE '\.(ya?ml)$' changed_files.txt | \
+            xargs -0 --no-run-if-empty npx --yes --prefix .github/lintpkg yaml-lint || (echo "❌ YAML lint errors found!" && exit 1)
+
+      # Step 9: Set up Python 3.x (only if there are Python files)
+      - name: Set up Python 3.x
+        if: steps.files.outputs.has_python_files == 'true' && steps.split.outputs.has_python3_files == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Step 10.1: Cache pip dependencies for faster installs
+      - name: Cache pip dependencies
+        if: steps.files.outputs.has_python_files == 'true' && steps.split.outputs.has_python3_files == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-black-23.1.0-flake8-6.0.0
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install Python linters (Black & Flake8)
+        if: steps.files.outputs.has_python_files == 'true' && steps.split.outputs.has_python3_files == 'true'
+        run: |
+          pip install black==23.1.0 flake8==6.0.0
+
+      # Step 11: Black format check on changed Python files
+      - name: Black Format Check (Python 3 files)
+        if: steps.split.outputs.has_python3_files == 'true'
+        run: |
+          xargs -0 --no-run-if-empty black --check < "${{ steps.split.outputs.python3_list_path }}" || (
+            echo "❌ Black found formatting issues!" && exit 1
+          )
+
+      # Step 12: Flake8 lint on changed Python files
+      - name: Flake8 Lint (Python 3 files)
+        if: steps.split.outputs.has_python3_files == 'true'
+        run: |
+          xargs -0 --no-run-if-empty flake8 < "${{ steps.split.outputs.python3_list_path }}" || (
+            echo "❌ Flake8 lint errors found!" && exit 1
+          )
+
+      # Step 12.5: Set up Python for Python 2 checks (if needed)
+      - name: Set up Python 3.x (for Python 2 checks)
+        if: steps.split.outputs.has_python2_files == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Step 12.6: Install simple Python 2 linters/formatters
+      - name: Install pycodestyle and autopep8 (for Python 2 files)
+        if: steps.split.outputs.has_python2_files == 'true'
+        run: |
+          pip install pycodestyle==2.11.1 autopep8==2.0.4
+
+      # Step 12.7: pycodestyle on Python 2 files (non-blocking by default)
+      - name: pycodestyle (Python 2 files)
+        if: steps.split.outputs.has_python2_files == 'true'
+        env:
+          FAIL_ON_PY2: ${{ vars.FAIL_ON_PY2 }}
+        run: |
+          xargs -0 --no-run-if-empty pycodestyle < "${{ steps.split.outputs.python2_list_path }}" || (
+            echo "⚠️ pycodestyle found issues in Python 2 files"
+            [ "$FAIL_ON_PY2" = "true" ] && exit 1 || true
+          )
+
+      # Step 12.8: autopep8 diff on Python 2 files (non-blocking by default)
+      - name: autopep8 diff (Python 2 files)
+        if: steps.split.outputs.has_python2_files == 'true'
+        env:
+          FAIL_ON_PY2: ${{ vars.FAIL_ON_PY2 }}
+        run: |
+          xargs -0 --no-run-if-empty autopep8 --diff --exit-code < "${{ steps.split.outputs.python2_list_path }}" || (
+            echo "⚠️ autopep8 suggests formatting changes in Python 2 files"
+            [ "$FAIL_ON_PY2" = "true" ] && exit 1 || true
+          )

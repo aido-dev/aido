@@ -1,0 +1,11 @@
+{
+  "name": "lintpkg",
+  "private": true,
+  "version": "1.0.0",
+  "devDependencies": {
+    "prettier": "3.6.2",
+    "eslint": "9.33.0",
+    "jsonlint": "1.6.3",
+    "yaml-lint": "1.7.0"
+  }
+}

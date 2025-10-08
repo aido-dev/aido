@@ -1,0 +1,44 @@
+[flake8]
+# Max line length for readability (same as Black default)
+max-line-length = 88
+
+# Exclude some common directories and files
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    .venv,
+    .env,
+    venv,
+    .eggs,
+    *.egg,
+    scrapy.cfg,
+    migrations
+
+# Enable flake8 extensions if installed (optional)
+# B, B9: flake8-bugbear (common bug/design problems)
+# E, W: pycodestyle (style errors and warnings)
+# F: pyflakes (syntax errors, unused imports)
+# I: flake8-isort (import order checks)
+extend-select = B,B9,E,F,W,I
+
+# Ignore specific rules
+# E203 and W503 are incompatible with Black
+ignore =
+    E203,
+    W503
+
+# Show source for each error
+show-source = True
+
+# Count total number of errors
+count = True
+
+# Per-file ignores (optional)
+# Example: ignore line length in spider files
+per-file-ignores =
+    rabattse/spiders/*.py: E501
+
+# Set max complexity for functions (optional, for maintainability)
+max-complexity = 10

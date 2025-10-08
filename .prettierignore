@@ -1,0 +1,10 @@
+# Ignore common folders and files not to be formatted by Prettier
+node_modules/
+vendor/
+dist/
+build/
+coverage/
+package-lock.json
+.git/
+.github/ISSUE_TEMPLATE/*.yml
+.github/ISSUE_TEMPLATE/*.yaml
