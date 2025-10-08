@@ -1,0 +1,20 @@
+{
+  "provider": "GEMINI",
+  "model": {
+    "CHATGPT": "gpt-4o-mini",
+    "GEMINI": "gemini-2.5-flash",
+    "CLAUDE": "claude-3-5-sonnet-latest"
+  },
+  "language": "English",
+  "tone": "executive, concise, professional",
+  "length": "short",
+  "style": "bullet-points",
+  "include": {
+    "title": true,
+    "body": true,
+    "filesSummary": true,
+    "diff": true
+  },
+  "additionalInstructions": "Audience: executives and stakeholders. Produce a skimmable, high-level summary. Do not include code blocks, diffs, or inline suggestions. Avoid implementation details unless essential for understanding impact.",
+  "promptTemplate": "You are an expert reviewer writing for executives and stakeholders. Produce a concise, executive-friendly PR summary in {{language}}.\n\nTone: {{tone}}\nTarget length: {{length}}\nStyle: {{style}}\nAudience: product/engineering leadership with limited context.\n\nPR Title:\n{{prTitle}}\n\nPR Description:\n{{prBody}}\n\nFiles Changed:\n{{filesSummary}}\n\nUnified Diff (truncated):\n{{diff}}\n\nDeliver EXACTLY these sections:\n- Overview — 1–2 sentences on what changed and why\n- Scope — key modules/files touched (no low-level detail)\n- Risks — potential breaking changes and unknowns\n- Impact — user, API, performance, security\n- Testing — what was done or still needed\n- Follow-ups — next steps or TODOs\n\nConstraints:\n- Do NOT include code blocks, fenced markdown (```), diffs, or inline suggestions.\n- Do NOT propose code changes.\n- Keep it skimmable and non-verbose."
+}
