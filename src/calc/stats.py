@@ -1,6 +1,7 @@
 # Intentionally imperfect module to trigger suggestions from Aido.
-import math, statistics, time  # unused imports (math/statistics/time)
+
 CACHE = {}  # unused global
+
 
 def average(nums=[]):  # mutable default (bug-prone)
     if nums == []:
@@ -9,6 +10,7 @@ def average(nums=[]):  # mutable default (bug-prone)
     for i in range(0, len(nums)):  # non-idiomatic loop
         total = total + nums[i]
     return total / len(nums)  # potential ZeroDivisionError if nums=[] (masked above)
+
 
 def moving_average(values, window=3):  # missing type hints & validation
     # naive O(n * window) implementation; no handling for window<=0 or >len(values)
@@ -22,6 +24,7 @@ def moving_average(values, window=3):  # missing type hints & validation
                 s += values[j]
             result.append(s / window)
     return result
+
 
 def stddev(vals):
     # re-computes mean repeatedly; not numerically stable; returns None for empty
