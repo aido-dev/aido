@@ -3,7 +3,7 @@
 
 [![GitHub release](https://img.shields.io/github/v/release/aido-dev/aido?style=flat-square)](https://github.com/aido-dev/aido/releases)
 ![Aido Dispatch](https://github.com/aido-dev/aido/actions/workflows/aido-dispatch.yml/badge.svg)
-[![License](https://img.shields.io/github/license/aido-dev/aido?style=flat-square)](LICENSE)
+![GitHub License](https://img.shields.io/github/license/aido-dev/aido)
 
 ![Supports Gemini](https://img.shields.io/badge/provider-Gemini-blue?logo=google&style=flat-square)
 ![Supports ChatGPT](https://img.shields.io/badge/provider-ChatGPT-10a37f?logo=openai&style=flat-square)
