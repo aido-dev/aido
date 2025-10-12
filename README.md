@@ -4,12 +4,14 @@
 [![GitHub release](https://img.shields.io/github/v/release/aido-dev/aido?style=flat-square)](https://github.com/aido-dev/aido/releases)
 ![Aido Dispatch](https://github.com/aido-dev/aido/actions/workflows/aido-dispatch.yml/badge.svg)
 ![GitHub License](https://img.shields.io/github/license/aido-dev/aido)
+[![Demo PRs](https://img.shields.io/badge/Demo%20PRs-See%20examples-6f42c1?style=flat-square)](https://github.com/aido-dev/aido/pulls)
+
 
 ![Supports Gemini](https://img.shields.io/badge/provider-Gemini-blue?logo=google&style=flat-square)
 ![Supports ChatGPT](https://img.shields.io/badge/provider-ChatGPT-10a37f?logo=openai&style=flat-square)
 ![Supports Claude](https://img.shields.io/badge/provider-Claude-8a2be2?style=flat-square)
 
-ido lets you **review, summarize, explain and improve code** by simply commenting on a PR.
+Aido lets you **review, summarize, explain and improve code** by simply commenting on a PR.
 It works with **Gemini, ChatGPT, and Claude**, right inside GitHub Actions.
 
 ---
