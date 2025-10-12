@@ -196,6 +196,10 @@ function buildPrompt(config, context) {
 - When you show code, ALWAYS wrap non-suggestion code in fenced code blocks using tildes with a language hint when possible (e.g., ~~~js, ~~~ts, ~~~py, ~~~diff). Reserve triple backticks only for GitHub apply blocks using \`\`\`suggestion. Every fence must be closed.
 - Do not interleave narrative text inside a code block. Keep narrative outside code fences.
 - Prefer GitHub suggestion blocks (use \`\`\`suggestion fences) when proposing a concrete, directly applicable change to a single file/hunk. Never use regular triple backticks for non-suggestion code; use tildes (~) instead. Do not nest fences.
+- Ensure all fences are balanced and closed; never leave unmatched fences.
+- Use one suggestion block per discrete change; do not combine multiple files in a single block.
+- Match exact file paths from the "Files Changed" list and use new-file line numbers.
+- Keep suggestion blocks minimal and compilable/runnable where applicable.
 - If showing before/after, use two separate fenced blocks labeled "Before:" and "After:".
 - Call out potential risks and effort realistically.
 - Avoid speculative or unverifiable claims.`,
@@ -283,10 +287,19 @@ async function generateWithClaude(prompt, model) {
 
 /**
  * Ensure code fences are balanced to avoid broken code blocks in GitHub comments
+ * - Preserve GitHub apply blocks (```suggestion)
+ * - Convert non-suggestion triple backticks to tildes (~~~) to avoid fence collisions
+ * - Balance fences to prevent rendering issues
  */
 function sanitizeFences(text) {
   if (!text) return '';
   let out = text;
+
+  // If there's an unmatched opening suggestion fence, add a closing fence first
+  // so the tokenizer below can safely capture it.
+  if (out.includes('```suggestion') && !/```suggestion[\s\S]*?```/.test(out)) {
+    out += '\n```';
+  }
 
   // Protect valid suggestion blocks by tokenizing them
   const stash = [];
@@ -297,8 +310,9 @@ function sanitizeFences(text) {
   });
 
   // Convert remaining triple-backtick code fences to tildes (~~~)
-  // Preserve language hints when present
-  out = out.replace(/```([a-zA-Z0-9+-]*)\s*\n/g, (m, lang) => `~~~${lang}\n`);
+  // Preserve language header (may include attributes like "json title=...")
+  out = out.replace(/```([^\r\n`]*)\r?\n/g, (m, header) => `~~~${header}\n`);
+  // Any other stray ``` occurrences become ~~~
   out = out.replace(/```/g, '~~~');
 
   // Normalize overly long tilde fences like ~~~~ -> ~~~
@@ -315,7 +329,7 @@ function sanitizeFences(text) {
     out = out.replace(`__AIDO_SUGGESTION_${i}__`, block);
   });
 
-  // If any unmatched opening suggestion fence remains, close it at the end
+  // As a final guard, if any unmatched opening suggestion fence remains, close it
   const opens = (out.match(/```suggestion/g) || []).length;
   const closes = (out.match(/```/g) || []).length;
   if (opens > closes) {
