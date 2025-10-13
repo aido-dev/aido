@@ -125,8 +125,12 @@ jobs:
       # Step 6: ESLint on changed JS/TS files (from lintpkg toolchain)
       - name: ESLint Check (changed JS/TS files)
         run: |
-          grep -zE '\.(js|ts)$' changed_files.txt | \
-            xargs -0 --no-run-if-empty npx --yes --prefix .github/lintpkg eslint || (echo "❌ ESLint errors found!" && exit 1)
+          LPKG="$GITHUB_WORKSPACE/.github/lintpkg"
+          CFG="$LPKG/eslint.config.cjs"
+          grep -zE '\.(js|mjs|cjs|ts)$' changed_files.txt | \
+            xargs -0 --no-run-if-empty npx --yes --prefix "$LPKG" eslint \
+              --config "$CFG" \
+              --max-warnings=0
 
       # Step 7: JSONLint on changed JSON files (from lintpkg toolchain)
       - name: JSONLint Check (changed JSON files)
