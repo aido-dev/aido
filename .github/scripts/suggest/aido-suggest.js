@@ -11,6 +11,26 @@
  * - Generates suggestions via selected provider: CHATGPT | GEMINI | CLAUDE
  * - Posts the suggestions as a PR comment
  *
+ * Output format (strict, per changed file):
+ *
+ * <short title>
+ *
+ * Rationale: <one sentence>
+ *
+ * File: <filename>
+ * Replace this:
+ * ```
+ * <old code>
+ * ```
+ *
+ * With this:
+ * ```
+ * <new code>
+ * ```
+ *
+ * Estimated Risk: <Low|Medium|High>
+ * Estimated Effort: <XS|S|M|L>
+ *
  * Required env:
  * - GITHUB_TOKEN
  * - CHATGPT_API_KEY (if provider is CHATGPT)
@@ -20,6 +40,7 @@
  * Notes:
  * - Designed to run in GitHub Actions on Node 20+ (fetch is global).
  * - Workflow should create a synthetic GITHUB_EVENT_PATH with { pull_request.number }.
+ * - Uses triple backticks, no diff fences, no suggestion fences.
  */
 
 const fs = require('fs');
@@ -32,16 +53,17 @@ const CHATGPT_API_KEY = process.env.CHATGPT_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const GITHUB_EVENT_PATH = process.env.GITHUB_EVENT_PATH;
+const REPO_FULL = process.env.GITHUB_REPOSITORY;
 
-// API client
+// API Client
 const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
-// Local config
+// Local Config
 const CONFIG_FILENAME = 'aido-suggest-config.json';
 const CONFIG_PATH = path.join(__dirname, CONFIG_FILENAME);
 
-// Truncation limit to keep prompts manageable
-const DIFF_MAX_CHARS = 15000;
+// Truncation to keep prompts manageable (per file)
+const DIFF_MAX_CHARS = 6000;
 
 // Default config
 const DEFAULT_CONFIG = {
@@ -53,8 +75,8 @@ const DEFAULT_CONFIG = {
   },
   language: 'English',
   tone: 'constructive, pragmatic, professional',
-  length: 'medium', // 'short' | 'medium' | 'long'
-  style: 'bullet-points', // 'bullet-points' | 'sections' | 'paragraph'
+  length: 'medium',
+  style: 'bullet-points',
   include: {
     title: true,
     body: true,
@@ -63,16 +85,54 @@ const DEFAULT_CONFIG = {
   },
   guardrails:
     'Focus on small, safe refactors and concrete improvements. Avoid large-scale rewrites unless trivially safe. Prefer clarity, maintainability, testability, and small performance wins. Respect existing patterns and conventions where reasonable.',
+  // Natural Replace/With format w/ triple backticks
   deliverFormat:
-    'Group suggestions by file when possible. For each suggestion: provide (1) a concise title, (2) a brief rationale, (3) concrete code changes in before/after or patch-like snippets, (4) estimated risk level (low/medium/high), (5) estimated effort (XS/S/M).',
+    'Each suggestion must follow this exact structure:\n\n' +
+    '<short, clear title>\n\n' +
+    'Rationale: <short, one-sentence rationale>\n\n' +
+    'File: <filename>\n' +
+    'Replace this:\n' +
+    '```\n<old code>\n```\n\n' +
+    'With this:\n' +
+    '```\n<new code>\n```\n\n' +
+    'Estimated Risk: <Low|Medium|High>\n' +
+    'Estimated Effort: <XS|S|M|L>',
   additionalInstructions:
-    'Prefer standard patterns and idioms used in common ecosystems. Use clear code snippets. Avoid speculative or unverified claims.',
-  // Optional custom template with placeholders:
-  // {{language}}, {{tone}}, {{length}}, {{style}}, {{prTitle}}, {{prBody}}, {{filesSummary}}, {{diff}}, {{guardrails}}, {{deliverFormat}}
+    'Use clear, minimal code blocks. No diff fences. No suggestion fences. No HTML. Keep code runnable where applicable.',
   promptTemplate: null,
 };
 
-// Read config with graceful fallback
+// Strict output contract & example
+const OUTPUT_CONTRACT = `
+ You must output one or more suggestions. For EACH suggestion, use this exact structure:
+
+ <short, clear title>
+
+ Rationale: <short, one-sentence rationale>
+
+ File: <filename>
+ Replace this:
+ \`\`\`
+ <old code>
+ \`\`\`
+
+ With this:
+ \`\`\`
+ <new code>
+ \`\`\`
+
+ Estimated Risk: <Low|Medium|High>
+ Estimated Effort: <XS|S|M|L>
+
+ Rules:
+ - Use triple backticks only (no ~~~, no diff fences, no \`\`\`suggestion).
+ - No extra commentary or HTML outside the format.
+ - One blank line between each section.
+ - Be concise and consistent in indentation.
+ - Output may contain multiple suggestions, separated by two newlines.
+ `.trim();
+
+// Utils
 function loadConfig() {
   try {
     if (fs.existsSync(CONFIG_PATH)) {
@@ -91,33 +151,14 @@ function loadConfig() {
   return DEFAULT_CONFIG;
 }
 
-// Build PR context
-async function getPrContext(owner, repo, prNumber) {
-  const { data: pr } = await octokit.pulls.get({ owner, repo, pull_number: prNumber });
-
-  const files = await octokit.paginate(octokit.pulls.listFiles, {
-    owner,
-    repo,
-    pull_number: prNumber,
-    per_page: 100,
-  });
-
-  const { data: diff } = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
-    owner,
-    repo,
-    pull_number: prNumber,
-    mediaType: { format: 'diff' },
-  });
-
-  return {
-    prTitle: pr.title || '',
-    prBody: pr.body || '',
-    files,
-    diff,
-  };
+function truncate(str, max) {
+  if (!str) return '';
+  if (str.length <= max) return str;
+  const head = Math.floor(max * 0.7);
+  const tail = max - head - 30;
+  return `${str.slice(0, head)}\n...\n[truncated]\n...\n${str.slice(-tail)}`;
 }
 
-// Compact list of files changed
 function buildFilesSummary(files) {
   if (!files || files.length === 0) return 'No files changed.';
   const lines = files.map((f) => {
@@ -131,107 +172,114 @@ function buildFilesSummary(files) {
   return lines.join('\n');
 }
 
-// Truncate large strings while preserving head and tail
-function truncate(str, max) {
-  if (!str) return '';
-  if (str.length <= max) return str;
-  const head = Math.floor(max * 0.7);
-  const tail = max - head - 30;
-  return `${str.slice(0, head)}\n...\n[truncated]\n...\n${str.slice(-tail)}`;
+function isContractCompliant(text) {
+  if (!text) return false;
+  const must = [
+    'Rationale:',
+    'File:',
+    'Replace this:',
+    'With this:',
+    'Estimated Risk:',
+    'Estimated Effort:',
+  ];
+  if (!must.every((m) => text.includes(m))) return false;
+
+  // Ensure a title exists before the first "Rationale:" line
+  const ratioMatch = text.match(/^Rationale:/m);
+  if (!ratioMatch) return false;
+  const beforeRationale = text.slice(0, ratioMatch.index || 0);
+  const preLines = beforeRationale
+    .split('\n')
+    .map((l) => l.trimEnd())
+    .filter((l) => l.trim().length > 0);
+  if (preLines.length === 0) return false;
+  const titleLine = preLines[preLines.length - 1].trim();
+  const invalidStarts = [
+    'Rationale:',
+    'File:',
+    'Replace this:',
+    'With this:',
+    'Estimated Risk:',
+    'Estimated Effort:',
+    '```',
+  ];
+  if (invalidStarts.some((p) => titleLine.startsWith(p))) return false;
+
+  // triple backticks should be even count
+  const ticks = (text.match(/```/g) || []).length;
+  return ticks % 2 === 0;
 }
 
-function fillTemplate(template, ctx) {
-  return template
-    .replace(/{{language}}/g, ctx.language || '')
-    .replace(/{{tone}}/g, ctx.tone || '')
-    .replace(/{{length}}/g, ctx.length || '')
-    .replace(/{{style}}/g, ctx.style || '')
-    .replace(/{{prTitle}}/g, ctx.prTitle || '')
-    .replace(/{{prBody}}/g, ctx.prBody || '')
-    .replace(/{{filesSummary}}/g, ctx.filesSummary || '')
-    .replace(/{{diff}}/g, ctx.diff || '')
-    .replace(/{{guardrails}}/g, ctx.guardrails || '')
-    .replace(/{{deliverFormat}}/g, ctx.deliverFormat || '');
+// Keep triple backticks; just fix accidental ```suggestion and unbalanced fences
+function sanitizeFencesKeepBackticks(text) {
+  if (!text) return '';
+  let out = text;
+
+  // Avoid GitHub "apply suggestion" blocks
+  out = out.replace(/```suggestion/g, '```');
+
+  // If fences unbalanced, close them
+  const ticks = (out.match(/```/g) || []).length;
+  if (ticks % 2 !== 0) out += '\n```';
+
+  return out;
 }
 
-// Compose prompt for concrete suggestions/refactors
-function buildPrompt(config, context) {
+// GitHub PR Context
+async function getPrContext(owner, repo, prNumber) {
+  const { data: pr } = await octokit.pulls.get({ owner, repo, pull_number: prNumber });
+
+  const files = await octokit.paginate(octokit.pulls.listFiles, {
+    owner,
+    repo,
+    pull_number: prNumber,
+    per_page: 100,
+  });
+
+  return {
+    prTitle: pr.title || '',
+    prBody: pr.body || '',
+    files, // each has filename, status, additions, deletions, changes, patch (diff), etc.
+  };
+}
+
+// Prompt Building (per file)
+function buildPerFilePrompt(config, globalCtx, file) {
   const language = config.language || DEFAULT_CONFIG.language;
   const tone = config.tone || DEFAULT_CONFIG.tone;
   const length = config.length || DEFAULT_CONFIG.length;
   const style = config.style || DEFAULT_CONFIG.style;
+  const filesSummary = buildFilesSummary(globalCtx.files);
 
-  const include = config.include || {};
-  const parts = [];
-
-  parts.push(
+  const fileHeader = [
     `You are an experienced senior engineer and code reviewer. In ${language}, provide ${style} suggestions with a ${tone} tone.`,
-  );
-  parts.push(`Target length: ${length}. Suggestions must be concrete and actionable.`);
-
-  parts.push(`Guardrails:\n${config.guardrails || DEFAULT_CONFIG.guardrails}`);
-  parts.push(
+    `Target length: ${length}. Suggestions must be concrete and actionable.`,
+    `Guardrails:\n${config.guardrails || DEFAULT_CONFIG.guardrails}`,
     `Deliver the output in this format:\n${config.deliverFormat || DEFAULT_CONFIG.deliverFormat}`,
-  );
+    `STRICT OUTPUT CONTRACT:\n${OUTPUT_CONTRACT}`,
+    ``,
+    `PR Title:\n${globalCtx.prTitle}`,
+    `PR Description:\n${globalCtx.prBody || '(no description)'}`,
+    `Files Changed:\n${filesSummary}`,
+    ``,
+    `You are now focusing ONLY on this file: ${file.filename}`,
+    `Its unified diff (may be truncated) is below. Base your suggestions strictly on this file and include "File: ${file.filename}" exactly as shown:`,
+    `--- BEGIN DIFF (${file.filename}) ---`,
+    truncate(file.patch || '(no textual diff available)', DIFF_MAX_CHARS),
+    `--- END DIFF ---`,
+    ``,
+    `Output one or more suggestions strictly following the contract. If the diff is empty or binary, either output nothing or a single suggestion only if you can make a clear, file-specific improvement from context.`,
+  ];
 
-  if (include.title && context.prTitle) {
-    parts.push(`PR Title:\n${context.prTitle}`);
-  }
-  if (include.body && context.prBody) {
-    parts.push(`PR Description:\n${context.prBody}`);
-  }
-  if (include.filesSummary && context.filesSummary) {
-    parts.push(`Files Changed:\n${context.filesSummary}`);
-  }
-  if (include.diff && context.diff) {
-    parts.push(`Unified Diff (truncated):\n${context.diff}`);
-  }
-
-  parts.push(
-    `Guidance:
-- Prioritize clarity, maintainability, and testability.
-- Use idiomatic patterns.
-- Suggest small refactors, not sweeping rewrites, unless trivially safe.
-- Include short code snippets (before/after or patch-like) to illustrate the change.
-- When you show code, ALWAYS wrap non-suggestion code in fenced code blocks using tildes with a language hint when possible (e.g., ~~~js, ~~~ts, ~~~py, ~~~diff). Reserve triple backticks only for GitHub apply blocks using \`\`\`suggestion. Every fence must be closed.
-- Do not interleave narrative text inside a code block. Keep narrative outside code fences.
-- Prefer GitHub suggestion blocks (use \`\`\`suggestion fences) when proposing a concrete, directly applicable change to a single file/hunk. Never use regular triple backticks for non-suggestion code; use tildes (~) instead. Do not nest fences.
-- Ensure all fences are balanced and closed; never leave unmatched fences.
-- Use one suggestion block per discrete change; do not combine multiple files in a single block.
-- Match exact file paths from the "Files Changed" list and use new-file line numbers.
-- Keep suggestion blocks minimal and compilable/runnable where applicable.
-- If showing before/after, use two separate fenced blocks labeled "Before:" and "After:".
-- Call out potential risks and effort realistically.
-- Avoid speculative or unverifiable claims.`,
-  );
-
-  const defaultPrompt = parts.join('\n\n');
-
-  if (config.promptTemplate && typeof config.promptTemplate === 'string') {
-    return fillTemplate(config.promptTemplate, {
-      language,
-      tone,
-      length,
-      style,
-      prTitle: context.prTitle || '',
-      prBody: context.prBody || '',
-      filesSummary: context.filesSummary || '',
-      diff: context.diff || '',
-      guardrails: config.guardrails || DEFAULT_CONFIG.guardrails,
-      deliverFormat: config.deliverFormat || DEFAULT_CONFIG.deliverFormat,
-    });
-  }
-
-  return defaultPrompt;
+  return fileHeader.join('\n');
 }
 
 // Providers
-
 async function generateWithChatGPT(prompt, model) {
   if (!CHATGPT_API_KEY) throw new Error('CHATGPT_API_KEY is not set.');
-  const { default: ChatGPT } = await import('openai');
-  const chatgpt = new ChatGPT({ apiKey: CHATGPT_API_KEY });
-  const resp = await chatgpt.chat.completions.create({
+  const { default: OpenAI } = await import('openai');
+  const client = new OpenAI({ apiKey: CHATGPT_API_KEY });
+  const resp = await client.chat.completions.create({
     model: model || DEFAULT_CONFIG.model.CHATGPT,
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.2,
@@ -272,7 +320,7 @@ async function generateWithClaude(prompt, model) {
   const anthropic = new Anthropic({ apiKey: CLAUDE_API_KEY });
   const resp = await anthropic.messages.create({
     model: model || DEFAULT_CONFIG.model.CLAUDE,
-    max_tokens: 1600,
+    max_tokens: 2000,
     temperature: 0.2,
     messages: [{ role: 'user', content: prompt }],
   });
@@ -285,63 +333,23 @@ async function generateWithClaude(prompt, model) {
   return text;
 }
 
-/**
- * Ensure code fences are balanced to avoid broken code blocks in GitHub comments
- * - Preserve GitHub apply blocks (```suggestion)
- * - Convert non-suggestion triple backticks to tildes (~~~) to avoid fence collisions
- * - Balance fences to prevent rendering issues
- */
-function sanitizeFences(text) {
-  if (!text) return '';
-  let out = text;
+// Reformat Pass
+async function reformatToContract(provider, model, rawText) {
+  const reformatPrompt = [
+    'Reformat the following content into the exact output contract below. Return only the suggestions; no commentary.',
+    OUTPUT_CONTRACT,
+    '--- BEGIN CONTENT TO REFORMAT ---',
+    rawText,
+    '--- END CONTENT TO REFORMAT ---',
+  ].join('\n\n');
 
-  // If there's an unmatched opening suggestion fence, add a closing fence first
-  // so the tokenizer below can safely capture it.
-  if (out.includes('```suggestion') && !/```suggestion[\s\S]*?```/.test(out)) {
-    out += '\n```';
-  }
-
-  // Protect valid suggestion blocks by tokenizing them
-  const stash = [];
-  out = out.replace(/```suggestion[\s\S]*?```/g, (m) => {
-    const key = `__AIDO_SUGGESTION_${stash.length}__`;
-    stash.push(m);
-    return key;
-  });
-
-  // Convert remaining triple-backtick code fences to tildes (~~~)
-  // Preserve language header (may include attributes like "json title=...")
-  out = out.replace(/```([^\r\n`]*)\r?\n/g, (m, header) => `~~~${header}\n`);
-  // Any other stray ``` occurrences become ~~~
-  out = out.replace(/```/g, '~~~');
-
-  // Normalize overly long tilde fences like ~~~~ -> ~~~
-  out = out.replace(/~~~~+/g, '~~~');
-
-  // Balance tilde fences (avoid leaving an opening without a closing)
-  const tildeCount = (out.match(/~~~/g) || []).length;
-  if (tildeCount % 2 !== 0) {
-    out += '\n~~~';
-  }
-
-  // Restore suggestion blocks
-  stash.forEach((block, i) => {
-    out = out.replace(`__AIDO_SUGGESTION_${i}__`, block);
-  });
-
-  // As a final guard, if any unmatched opening suggestion fence remains, close it
-  const opens = (out.match(/```suggestion/g) || []).length;
-  const closes = (out.match(/```/g) || []).length;
-  if (opens > closes) {
-    out += '\n```';
-  }
-
-  return out;
+  if (provider === 'CHATGPT') return await generateWithChatGPT(reformatPrompt, model);
+  if (provider === 'GEMINI') return await generateWithGemini(reformatPrompt, model);
+  if (provider === 'CLAUDE') return await generateWithClaude(reformatPrompt, model);
+  throw new Error(`Unknown provider: ${provider}`);
 }
 
-/**
- * Post a PR comment
- */
+// Post Comment
 async function postComment(owner, repo, prNumber, body) {
   await octokit.issues.createComment({
     owner,
@@ -353,9 +361,8 @@ async function postComment(owner, repo, prNumber, body) {
 
 // Main
 async function main() {
-  const repoFull = process.env.GITHUB_REPOSITORY;
-  if (!repoFull) throw new Error('GITHUB_REPOSITORY is not set.');
-  const [owner, repo] = repoFull.split('/');
+  if (!REPO_FULL) throw new Error('GITHUB_REPOSITORY is not set.');
+  const [owner, repo] = REPO_FULL.split('/');
 
   // Get PR number from event
   let prNumber = null;
@@ -370,58 +377,104 @@ async function main() {
   }
   if (!prNumber) throw new Error('No PR number found in event.');
 
-  // Load configuration
+  // Load config
   const config = loadConfig();
   const provider = (config.provider || 'GEMINI').toUpperCase();
 
-  // Build context
-  const { prTitle, prBody, files, diff } = await getPrContext(owner, repo, prNumber);
-  const filesSummary = buildFilesSummary(files);
-  const truncatedDiff = config.include?.diff ? truncate(diff, DIFF_MAX_CHARS) : '';
+  // Build global context
+  const ctx = await getPrContext(owner, repo, prNumber);
 
-  const prompt = buildPrompt(config, {
-    prTitle,
-    prBody,
-    filesSummary: config.include?.filesSummary ? filesSummary : '',
-    diff: config.include?.diff ? truncatedDiff : '',
-  });
+  // Generate per-file suggestions and concatenate
+  let allSuggestions = [];
+  for (const f of ctx.files) {
+    // Skip non-textual/binary diffs if no patch
+    const patch = f.patch || '';
+    if (!patch.trim()) continue;
 
-  // Generate suggestions
-  let suggestions = '';
-  try {
-    if (provider === 'CHATGPT') {
-      suggestions = await generateWithChatGPT(prompt, config.model?.CHATGPT);
-    } else if (provider === 'GEMINI') {
-      suggestions = await generateWithGemini(prompt, config.model?.GEMINI);
-    } else if (provider === 'CLAUDE') {
-      suggestions = await generateWithClaude(prompt, config.model?.CLAUDE);
-    } else {
-      throw new Error(`Unknown provider: ${provider}`);
+    const filePrompt = buildPerFilePrompt(config, ctx, f);
+
+    // Call selected provider
+    let text = '';
+    try {
+      if (provider === 'CHATGPT') {
+        text = await generateWithChatGPT(filePrompt, config.model?.CHATGPT);
+      } else if (provider === 'GEMINI') {
+        text = await generateWithGemini(filePrompt, config.model?.GEMINI);
+      } else if (provider === 'CLAUDE') {
+        text = await generateWithClaude(filePrompt, config.model?.CLAUDE);
+      } else {
+        throw new Error(`Unknown provider: ${provider}`);
+      }
+
+      // Reformat once if not compliant
+      if (text && !isContractCompliant(text)) {
+        const reformatted = await reformatToContract(
+          provider,
+          provider === 'CHATGPT'
+            ? config.model?.CHATGPT
+            : provider === 'CLAUDE'
+              ? config.model?.CLAUDE
+              : config.model?.GEMINI,
+          text,
+        );
+        if (isContractCompliant(reformatted)) text = reformatted;
+      }
+
+      text = sanitizeFencesKeepBackticks(text);
+
+      if (text.trim()) {
+        // Ensure each suggestion includes the exact File: line for this file.
+        // If the model omitted or changed it, insert it immediately before "Replace this:".
+        const hasCorrectFileLine = new RegExp(`^File:\\s*${f.filename}\\s*$`, 'm').test(text);
+        let ensured = text.trim();
+        if (!hasCorrectFileLine) {
+          const lines = ensured.split('\n');
+          const idx = lines.findIndex((l) => l.trim() === 'Replace this:');
+          if (idx !== -1) {
+            lines.splice(idx, 0, `File: ${f.filename}`);
+            ensured = lines.join('\n');
+          } else {
+            // Fallback if "Replace this:" not found (shouldn't happen if compliant)
+            ensured = `File: ${f.filename}\n${ensured}`;
+          }
+        }
+
+        allSuggestions.push(ensured);
+      }
+    } catch (e) {
+      // Continue with other files; also post a small note for visibility
+      console.error(`[Aido Suggest] Provider error on file ${f.filename}:`, e.message || e);
+      allSuggestions.push(
+        `Unable to analyze ${f.filename}\n\nRationale: The provider returned an error for this file.\n\nFile: ${f.filename}\nReplace this:\n\`\`\`\n// (no change)\n\`\`\`\n\nWith this:\n\`\`\`\n// (no change)\n\`\`\`\n\nEstimated Risk: Low\nEstimated Effort: XS`,
+      );
     }
-  } catch (e) {
-    await postComment(
-      owner,
-      repo,
-      prNumber,
-      `**[Aido Suggest ERROR]** Failed to generate suggestions with provider '${provider}'.\n\nDetails: ${e.message || e}`,
-    );
-    throw e;
   }
 
-  // Post result
-  const header = '## ✨ Aido Suggestions (Concrete improvements & small refactors)';
-  const safeSuggestions = sanitizeFences(suggestions);
+  // If nothing produced (e.g., all binary), fallback to a single-fileless message.
+  if (allSuggestions.length === 0) {
+    allSuggestions = [
+      'No textual changes detected\n\n' +
+        'Rationale: No textual diffs were available to analyze.\n\n' +
+        'File: (n/a)\n' +
+        'Replace this:\n```\n// (no change)\n```\n\n' +
+        'With this:\n```\n// (no change)\n```\n\n' +
+        'Estimated Risk: Low\n' +
+        'Estimated Effort: XS',
+    ];
+  }
+
   const modelUsed =
     provider === 'CHATGPT'
       ? config.model?.CHATGPT || DEFAULT_CONFIG.model.CHATGPT
       : provider === 'CLAUDE'
         ? config.model?.CLAUDE || DEFAULT_CONFIG.model.CLAUDE
         : config.model?.GEMINI || DEFAULT_CONFIG.model.GEMINI;
-  const footer = `
 
-  ---
-  _Response generated using ${modelUsed}_`;
-  await postComment(owner, repo, prNumber, `${header}\n\n${safeSuggestions}${footer}`);
+  const header = '## ✨ Aido Suggestions (Concrete improvements & small refactors)\n';
+  const footer = `\n\n---\n_Response generated using ${modelUsed}_`;
+  const body = `${header}\n${allSuggestions.join('\n\n---\n\n')}${footer}`;
+
+  await postComment(owner, repo, prNumber, body);
 }
 
 // Execute
