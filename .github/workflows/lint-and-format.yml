@@ -3,7 +3,7 @@
 # - This workflow only runs linters and format checks on files changed in the PR.
 # - Supported filetypes for Prettier: js, ts, html, json, yml, yaml, sql
 # - ESLint runs only on changed JS/TS files.
-# - JSONLint runs only on changed JSON files.
+# - JSON syntax check using jq runs only on changed JSON files.
 # - YAML Lint runs only on changed YAML/YML files.
 # - Python: Runs Black (format) and Flake8 (lint) only if .py files are changed.
 # - All steps output which files are checked, and will exit with an error if problems are found.
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Step 1: Checkout repo
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -132,11 +132,11 @@ jobs:
               --config "$CFG" \
               --max-warnings=0
 
-      # Step 7: JSONLint on changed JSON files (from lintpkg toolchain)
-      - name: JSONLint Check (changed JSON files)
+      # Step 7: JSON syntax check (jq) on changed JSON files
+      - name: JSON Syntax Check (jq) (changed JSON files)
         run: |
           grep -zE '\.(json)$' changed_files.txt | \
-            xargs -0 --no-run-if-empty npx --yes --prefix .github/lintpkg jsonlint || (echo "❌ JSONLint errors found!" && exit 1)
+            xargs -0 --no-run-if-empty jq -e . > /dev/null || (echo "❌ JSON syntax errors found (jq)!" && exit 1)
 
       # Step 8: YAML Lint on changed YAML/YML files (from lintpkg toolchain)
       - name: YAML Lint Check (changed YAML/YML files)
@@ -147,7 +147,7 @@ jobs:
       # Step 9: Set up Python 3.x (only if there are Python files)
       - name: Set up Python 3.x
         if: steps.files.outputs.has_python_files == 'true' && steps.split.outputs.has_python3_files == 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -185,7 +185,7 @@ jobs:
       # Step 12.5: Set up Python for Python 2 checks (if needed)
       - name: Set up Python 3.x (for Python 2 checks)
         if: steps.split.outputs.has_python2_files == 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
