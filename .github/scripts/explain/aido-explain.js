@@ -268,7 +268,7 @@ async function generateWithClaude(prompt, model) {
   let Anthropic;
   try {
     ({ Anthropic } = require('@anthropic-ai/sdk'));
-  } catch (e) {
+  } catch {
     throw new Error("Claude selected but '@anthropic-ai/sdk' is not installed.");
   }
   const anthropic = new Anthropic({ apiKey: CLAUDE_API_KEY });
