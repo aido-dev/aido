@@ -11,8 +11,8 @@
  * - Runs optional context checks (imports/paths, PR description consistency)
  *
  * Output contract
- * - Review body: short summary (≤ ~200 words), recommendation, terse faceted notes, optional "Context checks"
- * - Inline comments: suggestion fences only (exact replacements), with severity → priority emoji
+ * - Review body: short summary (<= ~200 words), recommendation, terse faceted notes, optional "Context checks"
+ * - Inline comments: suggestion fences only (exact replacements), with severity -> priority emoji
  *   🔴 Urgent · 🟠 High · 🟡 Medium · 🟢 Low
  * - Each suggestion is immediately applyable via GitHub's "Commit suggestion" button
  *
@@ -122,7 +122,7 @@ async function getPrFiles(owner, repo, prNumber) {
   const commentableFiles = files.filter((f) => f.patch && f.status !== 'removed');
 
   console.log('\n=== PR Files and Patches ===');
-  commentableFiles.forEach(f => {
+  commentableFiles.forEach((f) => {
     console.log(`\nFile: ${f.filename}`);
     console.log(`Status: ${f.status}, Additions: ${f.additions}, Deletions: ${f.deletions}`);
     console.log('Patch preview (first 500 chars):');
@@ -261,8 +261,8 @@ OUTPUT (STRICT):
 }
 
 /**
-* Parse line number from diff hunk and build map of line number -> info
-*/
+ * Parse line number from diff hunk and build map of line number -> info
+ */
 function buildLineMap(patch) {
   const lines = patch.split('\n');
   const lineMap = new Map();
@@ -297,9 +297,9 @@ function buildLineMap(patch) {
 }
 
 /**
-* Validate that a suggestion makes sense for the target line
-* Enhanced to catch semantic mismatches and structural changes
-*/
+ * Validate that a suggestion makes sense for the target line
+ * Enhanced to catch semantic mismatches and structural changes
+ */
 function validateSuggestion(suggestion, lineMap) {
   const { startLine, endLine, code, issue } = suggestion;
 
@@ -322,20 +322,21 @@ function validateSuggestion(suggestion, lineMap) {
   // Extract key identifiers from both
   const extractIdentifiers = (text) => {
     const words = text.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];
-    return new Set(words.filter(w => w.length > 2));
+    return new Set(words.filter((w) => w.length > 2));
   };
 
   const actualIds = extractIdentifiers(actualCode);
   const suggestedIds = extractIdentifiers(code);
 
   // Check for identifier overlap
-  const commonIds = Array.from(actualIds).filter(id => suggestedIds.has(id));
+  const commonIds = Array.from(actualIds).filter((id) => suggestedIds.has(id));
   const hasOverlap = commonIds.length > 0;
 
   // Calculate overlap ratio for later use
-  const overlapRatio = (actualIds.size > 0 && suggestedIds.size > 0)
-    ? commonIds.length / Math.max(actualIds.size, suggestedIds.size)
-    : 0;
+  const overlapRatio =
+    actualIds.size > 0 && suggestedIds.size > 0
+      ? commonIds.length / Math.max(actualIds.size, suggestedIds.size)
+      : 0;
 
   // Extract structural patterns
   const extractStructure = (text) => {
@@ -366,7 +367,7 @@ function validateSuggestion(suggestion, lineMap) {
 
   // Count structural differences
   const structuralChanges = Object.keys(actualStructure).filter(
-    key => actualStructure[key] !== suggestedStructure[key]
+    (key) => actualStructure[key] !== suggestedStructure[key],
   );
 
   // CRITICAL: Detect guard clause removal
@@ -380,7 +381,9 @@ function validateSuggestion(suggestion, lineMap) {
   // CRITICAL: Detect existence check removal
   if (actualStructure.hasExistenceCheck && !suggestedStructure.hasExistenceCheck) {
     // Only allow if the issue explicitly mentions removing validation/check
-    const issueExplicit = /remov.*(?:check|validat|isset)|skip.*(?:check|validat)/i.test(issue || '');
+    const issueExplicit = /remov.*(?:check|validat|isset)|skip.*(?:check|validat)/i.test(
+      issue || '',
+    );
     if (!issueExplicit) {
       return {
         valid: false,
@@ -390,9 +393,10 @@ function validateSuggestion(suggestion, lineMap) {
   }
 
   // CRITICAL: Detect complete control flow replacement
-  const isCompleteRewrite = structuralChanges.length >= 3 &&
-                            (actualStructure.hasIf !== suggestedStructure.hasIf ||
-                            actualStructure.hasForeach !== suggestedStructure.hasForeach);
+  const isCompleteRewrite =
+    structuralChanges.length >= 3 &&
+    (actualStructure.hasIf !== suggestedStructure.hasIf ||
+      actualStructure.hasForeach !== suggestedStructure.hasForeach);
 
   if (isCompleteRewrite && commonIds.length < 2) {
     return {
@@ -413,7 +417,7 @@ function validateSuggestion(suggestion, lineMap) {
   if (actualIds.size > 0 && suggestedIds.size > 0 && overlapRatio < 0.2) {
     return {
       valid: false,
-      reason: `Insufficient identifier overlap (${Math.round(overlapRatio * 100)}%). Actual: "${actualCode.substring(0, 60)}", Suggested: "${suggestedCode.substring(0, 60)}"`
+      reason: `Insufficient identifier overlap (${Math.round(overlapRatio * 100)}%). Actual: "${actualCode.substring(0, 60)}", Suggested: "${suggestedCode.substring(0, 60)}"`,
     };
   }
 
@@ -432,11 +436,14 @@ function validateSuggestion(suggestion, lineMap) {
     const suggestedToken = getFirstToken(suggestedFirstLine);
 
     // If both have tokens and they're completely different with no overlap, flag it
-    if (actualToken && suggestedToken &&
-        actualToken !== suggestedToken &&
-        !commonIds.has(actualToken) &&
-        !commonIds.has(suggestedToken) &&
-        overlapRatio < 0.3) {
+    if (
+      actualToken &&
+      suggestedToken &&
+      actualToken !== suggestedToken &&
+      !commonIds.has(actualToken) &&
+      !commonIds.has(suggestedToken) &&
+      overlapRatio < 0.3
+    ) {
       return {
         valid: false,
         reason: `Multi-line replacement starts with completely different code structure. Actual starts: "${actualFirstLine.substring(0, 40)}", Suggested starts: "${suggestedFirstLine.substring(0, 40)}"`,
@@ -858,8 +865,8 @@ Output ONLY valid suggestions. Skip if you cannot find the exact line.
     const comment = {
       path: s.path,
       body: body,
-      line: s.endLine || s.startLine,  // End line for the comment
-      side: 'RIGHT',  // Comment on the new version
+      line: s.endLine || s.startLine, // End line for the comment
+      side: 'RIGHT', // Comment on the new version
     };
 
     // For multi-line comments, add start_line
@@ -897,7 +904,9 @@ Output ONLY valid suggestions. Skip if you cannot find the exact line.
     if (c.start_line) console.log(`  Range: ${c.start_line}-${c.line}`);
     console.log(`  Body preview: ${c.body.substring(0, 100)}...`);
     console.log(`  Has suggestion block: ${c.body.includes('```suggestion')}`);
-    console.log(`  Suggestion code preview: ${c.body.split('```suggestion')[1]?.substring(0, 80) || 'N/A'}`);
+    console.log(
+      `  Suggestion code preview: ${c.body.split('```suggestion')[1]?.substring(0, 80) || 'N/A'}`,
+    );
   });
 
   try {
