@@ -11,8 +11,8 @@
  * - Runs optional context checks (imports/paths, PR description consistency)
  *
  * Output contract
- * - Review body: short summary (<= ~200 words), recommendation, terse faceted notes, optional "Context checks"
- * - Inline comments: suggestion fences only (exact replacements), with severity -> priority emoji
+ * - Review body: short summary (≤ ~200 words), recommendation, terse faceted notes, optional "Context checks"
+ * - Inline comments: suggestion fences only (exact replacements), with severity → priority emoji
  *   🔴 Urgent · 🟠 High · 🟡 Medium · 🟢 Low
  * - Each suggestion is immediately applyable via GitHub's "Commit suggestion" button
  *
@@ -326,16 +326,16 @@ function validateSuggestion(suggestion, lineMap) {
   };
 
   const actualIds = extractIdentifiers(actualCode);
-  const suggestedIds = extractIdentifiers(code);
+  const suggestedIds = extractIdentifiers(suggestedCode);
 
-  // Check for identifier overlap
-  const commonIds = Array.from(actualIds).filter((id) => suggestedIds.has(id));
-  const hasOverlap = commonIds.length > 0;
+  // Check for identifier overlap (use a Set so we can .has(...) later)
+  const commonIds = new Set([...actualIds].filter((id) => suggestedIds.has(id)));
+  const hasOverlap = commonIds.size > 0;
 
   // Calculate overlap ratio for later use
   const overlapRatio =
     actualIds.size > 0 && suggestedIds.size > 0
-      ? commonIds.length / Math.max(actualIds.size, suggestedIds.size)
+      ? commonIds.size / Math.max(actualIds.size, suggestedIds.size)
       : 0;
 
   // Extract structural patterns
@@ -398,7 +398,7 @@ function validateSuggestion(suggestion, lineMap) {
     (actualStructure.hasIf !== suggestedStructure.hasIf ||
       actualStructure.hasForeach !== suggestedStructure.hasForeach);
 
-  if (isCompleteRewrite && commonIds.length < 2) {
+  if (isCompleteRewrite && commonIds.size < 2) {
     return {
       valid: false,
       reason: `Completely rewrites control flow with minimal identifier overlap. This looks like wrong line targeting. Actual: "${actualCode.substring(0, 80)}"`,
