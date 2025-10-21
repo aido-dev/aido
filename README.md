@@ -20,7 +20,7 @@ It works with **Gemini, ChatGPT, and Claude**, right inside GitHub Actions.
 - ⚡ On-demand PR reviews via comments (`aido review`, `aido summarize`, etc.)
 - 🤖 Multi-provider support: Gemini (default), ChatGPT, Claude
 - 🧩 Consolidated reviewer guided by personas (single LLM call)
-- 🧷 Applyable inline PR suggestions (no code blocks in the body)
+- 🧷 Applyable inline PR suggestions with **robust validation** (zero false positives, no code blocks in the body)
 - 🕵️ Optional context-aware checks (cross-file references, PR description consistency)
 - 📦 Pre-built persona packs in `/examples/.github/review/example personas/`
 - 🔧 Fully configurable prompts, tones, styles, and output formats
@@ -91,7 +91,7 @@ Save time, catch issues early, and improve code quality — without leaving GitH
   - `.github/workflows/aido-explain.yml`
   - `.github/workflows/aido-suggest.yml`
 
-Each workflow builds a prompt from PR context (title, body, changed files, **truncated diff ~15k chars**), calls the selected provider/model, and **posts a PR review with inline, applyable suggestions (when applicable)**.
+Each workflow builds a prompt from PR context (title, body, changed files, **truncated diff ~15k chars**), calls the selected provider/model, and **posts a PR review with inline, applyable suggestions (when applicable), validated by a robust layer to ensure safety and accuracy**.
 
 ---
 
@@ -118,7 +118,7 @@ Each workflow builds a prompt from PR context (title, body, changed files, **tru
   - Top-level `reviewer` chooses provider/model (and optional context checks).
   - `personas` define roles with prompt/tone/style/language to guide faceted notes.
 - The review body contains a clean summary, recommendation, faceted notes, and optional context checks.
-- All code changes are delivered as **inline PR review suggestions** (with “Apply suggestion” buttons) — not in the body.
+- All code changes are delivered as **inline PR review suggestions** (with “Apply suggestion” buttons), thoroughly validated for safety and actionability — not in the body.
 - **Keep it reasonable:** start with **3–5 personas** (e.g., pedagogy, architecture, security, performance, QA).
 
 **Pre-curated packs:** see `/examples/.github/review/example personas/`
