@@ -65,6 +65,8 @@ const CONFIG_PATH = path.join(__dirname, CONFIG_FILENAME);
 // Truncation to keep prompts manageable (per file)
 const DIFF_MAX_CHARS = 6000;
 
+const ELLIPSIS_MARKER = '\n...\n[truncated]\n...\n'; // Used in truncate function
+
 // Default config
 const DEFAULT_CONFIG = {
   provider: 'GEMINI', // 'CHATGPT' | 'GEMINI' | 'CLAUDE'
@@ -155,8 +157,8 @@ function truncate(str, max) {
   if (!str) return '';
   if (str.length <= max) return str;
   const head = Math.floor(max * 0.7);
-  const tail = max - head - 30;
-  return `${str.slice(0, head)}\n...\n[truncated]\n...\n${str.slice(-tail)}`;
+  const tail = max - head - ELLIPSIS_MARKER.length;
+  return `${str.slice(0, head)}${ELLIPSIS_MARKER}${str.slice(-tail)}`;
 }
 
 function buildFilesSummary(files) {
@@ -463,12 +465,7 @@ async function main() {
     ];
   }
 
-  const modelUsed =
-    provider === 'CHATGPT'
-      ? config.model?.CHATGPT || DEFAULT_CONFIG.model.CHATGPT
-      : provider === 'CLAUDE'
-        ? config.model?.CLAUDE || DEFAULT_CONFIG.model.CLAUDE
-        : config.model?.GEMINI || DEFAULT_CONFIG.model.GEMINI;
+  const modelUsed = config.model?.[provider] || DEFAULT_CONFIG.model[provider];
 
   const header = '## ✨ Aido Suggestions (Concrete improvements & small refactors)\n';
   const footer = `\n\n---\n_Response generated using ${modelUsed}_`;

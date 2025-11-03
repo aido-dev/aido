@@ -141,12 +141,15 @@ function buildFilesSummary(files) {
 /**
  * Truncate diff to a max number of characters.
  */
+const ELLIPSIS_MARKER = '\n...\n[truncated]\n...\n'; // Defined once
+
 function truncate(str, max) {
   if (!str) return '';
   if (str.length <= max) return str;
   const head = Math.floor(max * 0.7);
-  const tail = max - head - 30; // leave room for ellipsis marker
-  return `${str.slice(0, head)}\n...\n[truncated]\n...\n${str.slice(-tail)}`;
+  // Account for the length of the ellipsis marker in the truncation
+  const tail = max - head - ELLIPSIS_MARKER.length;
+  return `${str.slice(0, head)}${ELLIPSIS_MARKER}${str.slice(-tail)}`;
 }
 
 /**
@@ -349,8 +352,8 @@ async function main() {
   const prompt = buildPrompt(config, {
     prTitle,
     prBody,
-    filesSummary: config.include?.filesSummary ? filesSummary : '',
-    diff: config.include?.diff ? truncatedDiff : '',
+    filesSummary,
+    diff: truncatedDiff,
   });
 
   // Generate summary via selected provider
@@ -378,12 +381,7 @@ async function main() {
 
   // Post summary (append provider/model footer)
   const header = '## 📝 Aido PR Summary';
-  const modelUsed =
-    provider === 'CHATGPT'
-      ? config.model?.CHATGPT || DEFAULT_CONFIG.model.CHATGPT
-      : provider === 'CLAUDE'
-        ? config.model?.CLAUDE || DEFAULT_CONFIG.model.CLAUDE
-        : config.model?.GEMINI || DEFAULT_CONFIG.model.GEMINI;
+  const modelUsed = config.model?.[provider] || DEFAULT_CONFIG.model[provider];
   const footer = `\n\n---\n_Response generated using ${modelUsed}_`;
   await postComment(owner, repo, prNumber, `${header}\n\n${summaryText}${footer}`);
 }
