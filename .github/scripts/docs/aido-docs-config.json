@@ -1,0 +1,21 @@
+{
+  "provider": "GEMINI",
+  "model": {
+    "CHATGPT": "gpt-4o-mini",
+    "GEMINI": "gemini-2.5-flash",
+    "CLAUDE": "claude-3-5-sonnet-latest"
+  },
+  "language": "English",
+  "tone": "clear, professional",
+  "style": "pedagogic",
+  "length": "medium",
+  "outputFormat": "markdown",
+  "include": {
+    "title": true,
+    "body": true,
+    "filesSummary": true,
+    "diff": true
+  },
+  "additionalInstructions": "Draft concise and helpful documentation that aids new contributors, highlights intent, and explains how to use or extend the changes. If needed, include example snippets.",
+  "promptTemplate": "You are an expert technical writer and senior engineer. In {{language}}, draft or augment documentation for this pull request.\n\nAudience: contributors and maintainers. Tone: {{tone}}. Style: {{style}}. Target length: {{length}}. Output format: {{outputFormat}}.\n\nPR Title:\n{{prTitle}}\n\nPR Description:\n{{prBody}}\n\nFiles Changed:\n{{filesSummary}}\n\nUnified Diff (truncated):\n{{diff}}\n\nProduce content for:\n1) README updates: Explain the feature or changes, how to use it, examples, setup instructions if needed, and any caveats or limitations.\n2) Function/module docs: For key functions/classes modified or added, provide purpose, parameters, return values, side effects, and examples of usage.\n3) Migration or upgrade notes (if applicable): Outline steps for users upgrading from previous versions.\n\nRequirements:\n- Ensure the output is written in {{outputFormat}}. If {{outputFormat}} is 'markdown', use appropriate headings (##, ###), lists, and code fences. If 'plain-text', avoid markdown syntax.\n- Be accurate, avoid speculation. Keep explanations concrete and helpful.\n- If information is missing, call it out briefly without fabricating details.\n- Keep examples minimal but illustrative.\n\nRespond only with the documentation content."
+}

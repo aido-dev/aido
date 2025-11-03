@@ -8,6 +8,7 @@
 #     • aido review
 #     • aido summarize | aido sum | aido summary
 #     • aido explain
+#     • aido docs
 #     • aido suggest | aido improve
 #     • aido config-check | aido check-config | aido cc
 #     • aido debug
@@ -90,6 +91,7 @@ jobs:
             "aido review") cmd="review" ;;
             "aido summarize"|"aido sum"|"aido summary") cmd="summarize" ;;
             "aido explain") cmd="explain" ;;
+            "aido docs") cmd="docs" ;;
             "aido suggest"|"aido improve") cmd="suggest" ;;
             "aido help") cmd="help" ;;
             "aido config-check"|"aido check-config"|"aido cc") cmd="config-check" ;;
@@ -157,6 +159,19 @@ jobs:
     with:
       pr_number: ${{ github.event.issue.number }}
 
+  # Route 'aido docs' to the Aido Docs reusable workflow
+  docs:
+    name: Aido Docs
+    needs: dispatch
+    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'docs'
+    uses: ./.github/workflows/aido-docs.yml
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+    with:
+      pr_number: ${{ github.event.issue.number }}
+
   # Route 'aido suggest' to the Aido Suggest reusable workflow
   suggest:
     name: Aido Suggest
@@ -204,6 +219,9 @@ jobs:
 
           - aido explain
             Provide a developer-focused, step-by-step explanation** of a pull request.
+
+          - aido docs
+            Draft documentation for the PR (e.g., README updates, function docs).
 
           - aido suggest | aido improve
             Propose concrete improvements and small, safe refactors with rationale and code examples.

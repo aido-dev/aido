@@ -8,10 +8,10 @@
 #     • aido review
 #     • aido summarize | aido sum | aido summary
 #     • aido explain
+#     • aido docs
 #     • aido suggest | aido improve
 #     • aido config-check | aido check-config | aido cc
 #     • aido debug
-#     • aido debug --check-config | aido debug --cc | aido debug -cc
 #     • aido help
 # - Secrets are passed explicitly to called workflows for clarity (no inherit).
 # - Notes:
@@ -51,6 +51,7 @@ jobs:
             "aido review") cmd="review" ;;
             "aido summarize"|"aido sum"|"aido summary") cmd="summarize" ;;
             "aido explain") cmd="explain" ;;
+            "aido docs") cmd="docs" ;;
             "aido suggest"|"aido improve") cmd="suggest" ;;
             "aido help") cmd="help" ;;
             "aido config-check"|"aido check-config"|"aido cc") cmd="config-check" ;;
@@ -65,7 +66,6 @@ jobs:
       # and the command is not an internal command ('help' or 'debug').
       - name: Acknowledge request
         if: |
-          steps.auth.outputs.allowed == 'true' &&
           steps.parse.outputs.command != '' &&
           steps.parse.outputs.command != 'help' &&
           steps.parse.outputs.command != 'debug' &&
@@ -80,9 +80,8 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           ACTOR: ${{ github.actor }}
         run: |
-          gh issue comment "$ISSUE_NUMBER" \
-            --repo "$REPOSITORY" \
-            --body "🤖 Hi @$ACTOR, I’ve queued your aido $COMMAND request. You can follow progress here: $RUN_URL"
+          gh issue comment "$ISSUE_NUMBER" --repo "$REPOSITORY" \
+            --body "🤖 Hi @$ACTOR, I’ve queued your aido $COMMAND request. Follow progress here: $RUN_URL"
 
   # Route 'aido review' to the Aido Review reusable workflow
   review:
@@ -116,6 +115,19 @@ jobs:
     needs: dispatch
     if: needs.dispatch.outputs.command == 'explain'
     uses: ./.github/workflows/aido-explain.yml
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+    with:
+      pr_number: ${{ github.event.issue.number }}
+
+  # Route 'aido docs' to the Aido Docs reusable workflow
+  docs:
+    name: Aido Docs
+    needs: dispatch
+    if: needs.dispatch.outputs.command == 'docs'
+    uses: ./.github/workflows/aido-docs.yml
     secrets:
       CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -165,11 +177,14 @@ jobs:
           - aido review
             Run multiple AI personas to review the PR, then produce a consolidated digest with suggested improvements.
 
-          - aido summarize | aido sum
-            Generate a high-level PR summary (configurable provider, language, tone, length).
+          - aido summarize | aido sum | aido summary
+            Generate a high-level PR summary for stakeholders (configurable provider, language, tone, length).
 
           - aido explain
-            Provide a pedagogical explanation of the changes (helps teammates understand intent and impact).
+            Provide a developer-focused, step-by-step explanation** of a pull request.
+
+          - aido docs
+            Draft documentation for the PR (e.g., README updates, function docs).
 
           - aido suggest | aido improve
             Propose concrete improvements and small, safe refactors with rationale and code examples.
@@ -181,7 +196,7 @@ jobs:
             Validate Aido configuration files and flag provider/model mismatches or missing fields.
 
           - aido help
-            Prints this help message as inline comment.
+            Prints this help message as an inline comment.
 
           You can follow the current run here:
           EOF
@@ -268,7 +283,7 @@ jobs:
           EOF
           )"
 
-  debug-config:
+  check-config:
     name: Aido Config Check
     needs: dispatch
     if: needs.dispatch.outputs.command == 'config-check'
@@ -279,7 +294,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Validate Aido configuration files
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -11,7 +11,7 @@
 ![Supports ChatGPT](https://img.shields.io/badge/provider-ChatGPT-10a37f?logo=openai&style=flat-square)
 ![Supports Claude](https://img.shields.io/badge/provider-Claude-8a2be2?style=flat-square)
 
-Aido lets you **review, summarize, explain and improve code** by simply commenting on a PR.
+Aido lets you **review, summarize, explain, document, and improve code** by simply commenting on a PR.
 It works with **Gemini, ChatGPT, and Claude**, right inside GitHub Actions.
 
 ---
@@ -42,6 +42,7 @@ Comment these on any PR:
 - `aido review` → Multi-persona code review + digest
 - `aido summarize` | `aido sum` | `aido summary` → High-level PR summary for stakeholders
 - `aido explain` → Developer-focused step-by-step explanation
+- `aido docs` → Draft/augment documentation
 - `aido suggest` | `aido improve` → Safe improvement ideas
 - `aido config-check` → Validate configs
 
@@ -89,6 +90,7 @@ Save time, catch issues early, and improve code quality — without leaving GitH
   - `.github/workflows/aido-review.yml`
   - `.github/workflows/aido-summarize.yml`
   - `.github/workflows/aido-explain.yml`
+  - `.github/workflows/aido-docs.yml`
   - `.github/workflows/aido-suggest.yml`
 
 Each workflow builds a prompt from PR context (title, body, changed files, **truncated diff ~15k chars**), calls the selected provider/model, and **posts a PR review with inline, applyable suggestions (when applicable), validated by a robust layer to ensure safety and accuracy**.
@@ -105,6 +107,9 @@ Each workflow builds a prompt from PR context (title, body, changed files, **tru
 - **Explain (developer-focused):**
    - Script: `.github/scripts/explain/aido-explain.js`
    - Config: `.github/scripts/explain/aido-explain-config.json`
+- **Docs:**
+   - Script: `.github/scripts/docs/aido-docs.js`
+   - Config: `.github/scripts/docs/aido-docs-config.json`
 - **Suggest:**
    - Script: `.github/scripts/suggest/aido-suggest.js`
    - Config: `.github/scripts/suggest/aido-suggest-config.json`
@@ -132,7 +137,7 @@ Each workflow builds a prompt from PR context (title, body, changed files, **tru
 - Prefer **short, focused** prompts and configs.
 - Use `aido config-check` if things look off.
 - For UI work, pair `aido explain` with `aido suggest`.
-- For releases, run `aido summarize`.
+- For releases, run `aido summarize`  → `aido docs`.
 
 ---
 

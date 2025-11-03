@@ -9,6 +9,7 @@ Supported commands include:
 - `aido review`
 - `aido summarize | aido sum`
 - `aido explain`
+- `aido docs`
 - `aido suggest | aido improve`
 - `aido help`
 - `aido debug`
@@ -44,6 +45,7 @@ Special commands:
   - `aido-review.yml`
   - `aido-summarize.yml`
   - `aido-explain.yml`
+  - `aido-docs.yml`
   - `aido-suggest.yml`
 - Uses GitHub CLI (`gh`) for posting comments.
 - Requires `jq` for `config-check`.
