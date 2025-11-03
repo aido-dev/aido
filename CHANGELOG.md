@@ -5,6 +5,28 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.0.5] - 2025-11-03
+### ✨ New Features
+- **docs:** Introduced the new `aido docs` command for generating documentation drafts directly from PRs or issue comments.
+  Integrated into the CLI help output and supported by a new reusable workflow **`aido-docs.yml`**, allowing automatic documentation creation from PR context (summary, highlights, breaking changes, release notes draft).
+
+### 🧠 Improvements & Refactorings
+- **core:** Simplified AI model selection across workflows using bracket notation and optional chaining, improving readability and maintainability.
+  The same model selection pattern is now applied consistently across all scripts.
+- **text:** Introduced a named `ELLIPSIS_MARKER` constant in workflows to eliminate magic numbers and clarify truncation logic.
+  Ensures safer and more predictable truncation of long AI outputs.
+- **review:** Updated PR number retrieval to use `github.event.pull_request.number` with fallbacks for other event types.
+  Prevents workflow dispatch failures and improves cross-event compatibility.
+- **ci:** Quoted `pr_number` inputs in all reusable workflows (`aido-explain.yml`, `aido-review.yml`, `aido-summarize.yml`, `aido-suggest.yml`, `aido-docs.yml`) for consistent JSON handling and to avoid parsing errors.
+  Fixed synthetic event creation logic for more reliable dispatching.
+- **core:** Removed unused includes/imports and applied minor readability and structure improvements across scripts.
+
+#### ✅ Result
+Delivers improved internal consistency, workflow reliability, and expanded functionality with the new **Docs** command.
+Workflows are now safer and more predictable, and Aido’s automation pipeline is better prepared for upcoming releases.
+
+---
+
 ## [v1.0.4] - 2025-10-21
 ### 🐛 Bug Fixes
 - **review:** Treat `commonIds` as a **Set** (instead of array) so `.has()` works; compute `overlapRatio` using `commonIds.size`. Prevents runtime error: `commonIds.has is not a function`.
