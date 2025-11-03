@@ -14,7 +14,6 @@ Supported commands include:
 - `aido help`
 - `aido debug`
 - `aido config-check | aido check-config | aido cc`
-- `aido debug --check-config` (alias for config-check)
 
 Special commands:
 - **help** → posts available commands
