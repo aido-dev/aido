@@ -724,11 +724,11 @@ async function main() {
 
   if (process.env.GITHUB_EVENT_PATH) {
     const event = require(process.env.GITHUB_EVENT_PATH);
-    if (event.issue && event.issue.pull_request) {
+    if (event.pull_request) {
+      prNumber = event.pull_request.number;
+    } else if (event.issue && event.issue.pull_request) {
       const url = event.issue.pull_request.url;
       prNumber = Number(url.split('/').pop());
-    } else if (event.pull_request) {
-      prNumber = event.pull_request.number;
     }
   }
   if (!owner || !repo || !prNumber) throw new Error('Missing PR coordinates');
@@ -754,7 +754,7 @@ async function main() {
   const envModel = process.env.AIDO_MODEL || '';
   const defaultProvider = (reviewerCfg.provider || 'GEMINI').toUpperCase();
   const defaultModel =
-    reviewerCfg.model ||
+    reviewerCfg.model?.[defaultProvider] ||
     (defaultProvider === 'CLAUDE'
       ? 'claude-3-5-sonnet-latest'
       : defaultProvider === 'CHATGPT'

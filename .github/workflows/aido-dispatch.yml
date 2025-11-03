@@ -100,7 +100,13 @@ jobs:
 
       # Acknowledge only when allowed AND a supported, non-internal command
       - name: Acknowledge request
-        if: steps.auth.outputs.allowed == 'true' && steps.parse.outputs.command != '' && steps.parse.outputs.command != 'help' && steps.parse.outputs.command != 'debug' && steps.parse.outputs.command != 'debug-config' && github.event.issue.pull_request
+        if: |
+          steps.auth.outputs.allowed == 'true' &&
+          steps.parse.outputs.command != '' &&
+          steps.parse.outputs.command != 'help' &&
+          steps.parse.outputs.command != 'debug' &&
+          steps.parse.outputs.command != 'debug-config' &&
+          github.event.issue.pull_request
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -435,7 +441,8 @@ jobs:
           if [[ "$STATUS" == "ok" ]]; then
             REPORT="${REPORT}\nNo blocking issues detected."
           else
-            REPORT="${REPORT}\n\nRepository files under .github/scripts (maxdepth 3):\n\`\`\`\n$(find .github/scripts -maxdepth 3 -type f | sort 2>/dev/null)\n\`\`\`"
+            REPORT="${REPORT}\n\nRepository files under .github/scripts (maxdepth 3):\n"
+            REPORT="${REPORT}\`\`\`\n$(find .github/scripts -maxdepth 3 -type f | sort 2>/dev/null)\n\`\`\`"
           fi
 
           echo -e "$REPORT" > /tmp/aido_config_report.md

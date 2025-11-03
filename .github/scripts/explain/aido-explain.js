@@ -38,6 +38,8 @@ const CONFIG_PATH = path.join(__dirname, CONFIG_FILENAME);
 // Diff truncation to keep prompts reasonable
 const DIFF_MAX_CHARS = 15000;
 
+const ELLIPSIS_MARKER = '\n...\n[truncated]\n...\n'; // Used in truncate function
+
 // Default configuration
 const DEFAULT_CONFIG = {
   provider: 'GEMINI', // 'CHATGPT' | 'GEMINI' | 'CLAUDE'
@@ -136,8 +138,8 @@ function truncate(str, max) {
   if (!str) return '';
   if (str.length <= max) return str;
   const head = Math.floor(max * 0.7);
-  const tail = max - head - 30; // leave room for ellipsis marker
-  return `${str.slice(0, head)}\n...\n[truncated]\n...\n${str.slice(-tail)}`;
+  const tail = max - head - ELLIPSIS_MARKER.length; // leave room for ellipsis marker
+  return `${str.slice(0, head)}${ELLIPSIS_MARKER}${str.slice(-tail)}`;
 }
 
 /**
@@ -360,12 +362,7 @@ async function main() {
 
   // Post result (append provider/model footer)
   const header = '## 📘 Aido PR Explanation';
-  const modelUsed =
-    provider === 'CHATGPT'
-      ? config.model?.CHATGPT || DEFAULT_CONFIG.model.CHATGPT
-      : provider === 'CLAUDE'
-        ? config.model?.CLAUDE || DEFAULT_CONFIG.model.CLAUDE
-        : config.model?.GEMINI || DEFAULT_CONFIG.model.GEMINI;
+  const modelUsed = config.model?.[provider] || DEFAULT_CONFIG.model[provider];
   const footer = `
 
   ---
