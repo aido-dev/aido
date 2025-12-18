@@ -29,7 +29,7 @@ jobs:
 
       # Step 2: Cache node_modules for the isolated toolchain
       - name: Cache node modules (lintpkg)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.npm
           key: ${{ runner.os }}-npm-cache-${{ hashFiles('.github/lintpkg/package-lock.json') }}
@@ -154,7 +154,7 @@ jobs:
       # Step 10.1: Cache pip dependencies for faster installs
       - name: Cache pip dependencies
         if: steps.files.outputs.has_python_files == 'true' && steps.split.outputs.has_python3_files == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-black-23.1.0-flake8-6.0.0
