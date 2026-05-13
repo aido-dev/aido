@@ -44,6 +44,7 @@ Comment these on any PR:
 - `aido explain` → Developer-focused step-by-step explanation
 - `aido docs` → Draft/augment documentation
 - `aido suggest` | `aido improve` → Safe improvement ideas
+- `aido test` → Structured test plan, coverage gaps, and follow-up tasks
 - `aido config-check` → Validate configs
 
 ---
@@ -113,6 +114,9 @@ Each workflow builds a prompt from PR context (title, body, changed files, **tru
 - **Suggest:**
    - Script: `.github/scripts/suggest/aido-suggest.js`
    - Config: `.github/scripts/suggest/aido-suggest-config.json`
+- **Test:**
+   - Script: `.github/scripts/test/aido-test.js`
+   - Config: `.github/scripts/test/aido-test-config.json` *(adds `testFocus` for unit / integration / e2e / regression / performance / security / accessibility)*
 
 > Each config supports: `provider` (CHATGPT|GEMINI|CLAUDE), `model`, `language`, `tone`, `style`, `length`, `include` (title/body/filesSummary/diff), `additionalInstructions`, and an optional `promptTemplate` with placeholders.
 
@@ -138,6 +142,7 @@ Each workflow builds a prompt from PR context (title, body, changed files, **tru
 - Use `aido config-check` if things look off.
 - For UI work, pair `aido explain` with `aido suggest`.
 - For releases, run `aido summarize`  → `aido docs`.
+- Before merging, run `aido test` to surface missing test cases and coverage gaps.
 
 ---
 
