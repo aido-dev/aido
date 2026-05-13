@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 # --- Pure helpers -----------------------------------------------------------
 
+
 def clamp(value: float, lo: float, hi: float) -> float:
     """Clamp value into [lo, hi]. Assumes lo <= hi."""
     if value < lo:
@@ -48,6 +49,7 @@ def apply_discount(price: float, percent: float) -> float:
 
 
 # --- Branchy logic ----------------------------------------------------------
+
 
 @dataclass
 class CartItem:
@@ -87,6 +89,7 @@ def cart_total(items: Iterable[CartItem], coupon: str | None = None) -> float:
 
 # --- IO-touching code -------------------------------------------------------
 
+
 class OrderStore:
     """Tiny JSON-backed order store. Good target for mocked filesystem tests."""
 
@@ -109,6 +112,7 @@ class OrderStore:
 
 
 # --- Subtle math ------------------------------------------------------------
+
 
 def average_response_ms(samples: list[int]) -> float:
     """
