@@ -1,0 +1,31 @@
+{
+  "provider": "GEMINI",
+  "model": {
+    "CHATGPT": "gpt-4o-mini",
+    "GEMINI": "gemini-2.5-flash",
+    "CLAUDE": "claude-3-5-sonnet-latest"
+  },
+  "language": "English",
+  "tone": "pragmatic, quality-focused",
+  "length": "medium",
+  "style": "structured",
+  "outputFormat": "markdown",
+  "include": {
+    "title": true,
+    "body": true,
+    "filesSummary": true,
+    "diff": true
+  },
+  "testFocus": {
+    "unit": true,
+    "integration": true,
+    "e2e": true,
+    "regression": true,
+    "performance": false,
+    "security": false,
+    "accessibility": false
+  },
+  "deliverFormat": "Provide: (1) Test Plan Overview, (2) Test Matrix/Checklist, (3) Detailed Test Cases, (4) Gaps & TODOs, (5) Fixtures & Data Setup, (6) Mocks/Stubs, (7) Automation Notes, (8) Regression Suite Updates.",
+  "additionalInstructions": "Keep suggestions specific, actionable, and safe to implement incrementally. Use concise steps and clear expected results. Avoid speculation.",
+  "promptTemplate": null
+}
