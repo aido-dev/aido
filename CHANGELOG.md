@@ -5,6 +5,19 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.0.6] - 2026-05-13
+### ✨ New Features
+- **test:** Introduced the new `aido test` command for generating structured test plans directly from PRs.
+  Produces proposed test cases (functional, negative, edge), identified coverage gaps, and follow-up tasks (fixtures, mocks, regression updates). Backed by a new reusable workflow **`aido-test.yml`** and configuration file `aido-test-config.json` with configurable test focus (unit / integration / e2e / regression / performance / security / accessibility).
+
+### 🧠 Improvements & Refactorings
+- **dispatch:** Routed `aido test` through `aido-dispatch.yml`, added it to the help output, and included its config in `aido config-check` validation.
+
+#### ✅ Result
+Expands Aido's automation pipeline with a dedicated test-planning command, complementing the existing `review`, `summarize`, `explain`, `docs`, and `suggest` commands.
+
+---
+
 ## [v1.0.5] - 2025-11-03
 ### ✨ New Features
 - **docs:** Introduced the new `aido docs` command for generating documentation drafts directly from PRs or issue comments.

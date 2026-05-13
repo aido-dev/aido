@@ -10,6 +10,7 @@
 #     • aido explain
 #     • aido docs
 #     • aido suggest | aido improve
+#     • aido test
 #     • aido config-check | aido check-config | aido cc
 #     • aido debug
 #     • aido help
@@ -93,6 +94,7 @@ jobs:
             "aido explain") cmd="explain" ;;
             "aido docs") cmd="docs" ;;
             "aido suggest"|"aido improve") cmd="suggest" ;;
+            "aido test") cmd="test" ;;
             "aido help") cmd="help" ;;
             "aido config-check"|"aido check-config"|"aido cc") cmd="config-check" ;;
             "aido debug") cmd="debug" ;;
@@ -185,6 +187,19 @@ jobs:
     with:
       pr_number: ${{ github.event.issue.number }}
 
+  # Route 'aido test' to the Aido Test reusable workflow
+  test:
+    name: Aido Test
+    needs: dispatch
+    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'test'
+    uses: ./.github/workflows/aido-test.yml
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+    with:
+      pr_number: ${{ github.event.issue.number }}
+
   # Route 'aido help' to a Help job that posts a high-level commands overview
   help:
     name: Aido Help
@@ -225,6 +240,9 @@ jobs:
 
           - aido suggest | aido improve
             Propose concrete improvements and small, safe refactors with rationale and code examples.
+
+          - aido test
+            Generate a structured test plan with proposed test cases, coverage gaps, fixtures, mocks, and automation notes.
 
           - aido debug
             Post diagnostic details about parsing and routing to help troubleshoot dispatch.
@@ -455,6 +473,7 @@ jobs:
           check_single_config ".github/scripts/summarize/aido-summarize-config.json" "Summarize"
           check_single_config ".github/scripts/explain/aido-explain-config.json" "Explain"
           check_single_config ".github/scripts/suggest/aido-suggest-config.json" "Suggest"
+          check_single_config ".github/scripts/test/aido-test-config.json" "Test"
 
           if [[ "$STATUS" == "ok" ]]; then
             REPORT="${REPORT}\nNo blocking issues detected."
