@@ -122,6 +122,13 @@ Desktop.ini
 .github/**/.cache/
 .github/**/.tmp/
 
+# Local planning / scratchpad notes (not pushed)
+TODO.md
+GEMINI.md
+IMPROVEMENTS.md
+CLAUDE.md
+WARP.md
+
 # -------------------------
 # Python
 # -------------------------
