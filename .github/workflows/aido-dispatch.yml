@@ -90,12 +90,16 @@ jobs:
           # Expose empty outputs so downstream conditions won't match
           echo "command="   >> "$GITHUB_OUTPUT"
           echo "normalized=" >> "$GITHUB_OUTPUT"
-      # Parse only when allowed
+      # Parse only when allowed.
+      # SECURITY: the comment body is attacker-controlled, so it MUST be
+      # passed via env (which quotes it) rather than spliced into the
+      # script via ${{ }} (which would allow shell injection).
       - id: parse
         if: steps.auth.outputs.allowed == 'true'
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          body="${{ github.event.comment.body }}"
-          first_line="$(printf "%s" "$body" | head -n1)"
+          first_line="$(printf "%s" "$COMMENT_BODY" | head -n1)"
           norm="$(printf "%s" "$first_line" | tr '[:upper:]' '[:lower:]' | sed -E 's/[[:space:]]+/ /g; s/^ +//; s/ +$//')"
           cmd=""
           case "$norm" in
