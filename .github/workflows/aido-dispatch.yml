@@ -11,12 +11,13 @@
 #     • aido docs
 #     • aido suggest | aido improve
 #     • aido test
+#     • aido triage (on issues)
 #     • aido config-check | aido check-config | aido cc
 #     • aido debug
 #     • aido help
 # - Secrets are passed explicitly to called workflows for clarity (no inherit).
 # - Notes:
-#     • Only comments on PRs are routed (issue_comment event with a PR context).
+#     • Comments on PRs and issues are both routed (some commands target PRs, others target issues).
 #     • For forked PRs, repository secrets may be unavailable due to GitHub policy.
 #     • This workflow differs from the example dispatch workflow in that it
 #       requires authentication (owner or collaborator only) for dispatching commands.
@@ -37,12 +38,12 @@ permissions:
 jobs:
   dispatch:
     name: Dispatch
-    if: github.event.issue.pull_request
     runs-on: ubuntu-latest
     outputs:
       allowed: ${{ steps.auth.outputs.allowed }}
       command: ${{ steps.parse.outputs.command }}
       normalized: ${{ steps.parse.outputs.normalized }}
+      is_pr: ${{ steps.context.outputs.is_pr }}
     steps:
       # Auth inline (owner or collaborator only)
       - id: auth
@@ -65,6 +66,15 @@ jobs:
             esac
           fi
           echo "allowed=$allowed" >> "$GITHUB_OUTPUT"
+
+      # Determine whether this comment is on a PR or a plain issue
+      - id: context
+        run: |
+          if [ -n "${{ github.event.issue.pull_request }}" ]; then
+            echo "is_pr=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_pr=false" >> "$GITHUB_OUTPUT"
+          fi
 
       # If not allowed: inform and short-circuit (keep job green).
       - name: Politely deny if unauthorized
@@ -95,6 +105,7 @@ jobs:
             "aido docs") cmd="docs" ;;
             "aido suggest"|"aido improve") cmd="suggest" ;;
             "aido test") cmd="test" ;;
+            "aido triage") cmd="triage" ;;
             "aido help") cmd="help" ;;
             "aido config-check"|"aido check-config"|"aido cc") cmd="config-check" ;;
             "aido debug") cmd="debug" ;;
@@ -109,8 +120,7 @@ jobs:
           steps.parse.outputs.command != '' &&
           steps.parse.outputs.command != 'help' &&
           steps.parse.outputs.command != 'debug' &&
-          steps.parse.outputs.command != 'debug-config' &&
-          github.event.issue.pull_request
+          steps.parse.outputs.command != 'debug-config'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -126,7 +136,7 @@ jobs:
   review:
     name: Aido Review
     needs: dispatch
-    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'review'
+    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'review' && needs.dispatch.outputs.is_pr == 'true'
     uses: ./.github/workflows/aido-review.yml
     secrets:
       CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
@@ -139,7 +149,7 @@ jobs:
   summarize:
     name: Aido Summarize
     needs: dispatch
-    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'summarize'
+    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'summarize' && needs.dispatch.outputs.is_pr == 'true'
     uses: ./.github/workflows/aido-summarize.yml
     secrets:
       CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
@@ -152,7 +162,7 @@ jobs:
   explain:
     name: Aido Explain
     needs: dispatch
-    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'explain'
+    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'explain' && needs.dispatch.outputs.is_pr == 'true'
     uses: ./.github/workflows/aido-explain.yml
     secrets:
       CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
@@ -165,7 +175,7 @@ jobs:
   docs:
     name: Aido Docs
     needs: dispatch
-    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'docs'
+    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'docs' && needs.dispatch.outputs.is_pr == 'true'
     uses: ./.github/workflows/aido-docs.yml
     secrets:
       CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
@@ -178,7 +188,7 @@ jobs:
   suggest:
     name: Aido Suggest
     needs: dispatch
-    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'suggest'
+    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'suggest' && needs.dispatch.outputs.is_pr == 'true'
     uses: ./.github/workflows/aido-suggest.yml
     secrets:
       CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
@@ -191,7 +201,7 @@ jobs:
   test:
     name: Aido Test
     needs: dispatch
-    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'test'
+    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'test' && needs.dispatch.outputs.is_pr == 'true'
     uses: ./.github/workflows/aido-test.yml
     secrets:
       CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
@@ -199,6 +209,19 @@ jobs:
       CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
     with:
       pr_number: ${{ github.event.issue.number }}
+
+  # Route 'aido triage' to the Aido Triage reusable workflow (issues only)
+  triage:
+    name: Aido Triage
+    needs: dispatch
+    if: needs.dispatch.outputs.allowed == 'true' && needs.dispatch.outputs.command == 'triage' && needs.dispatch.outputs.is_pr == 'false'
+    uses: ./.github/workflows/aido-triage.yml
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+    with:
+      issue_number: ${{ github.event.issue.number }}
 
   # Route 'aido help' to a Help job that posts a high-level commands overview
   help:
@@ -243,6 +266,9 @@ jobs:
 
           - aido test
             Generate a structured test plan with proposed test cases, coverage gaps, fixtures, mocks, and automation notes.
+
+          - aido triage (on issues)
+            Classify the issue, suggest labels, find similar open issues, and recommend next steps.
 
           - aido debug
             Post diagnostic details about parsing and routing to help troubleshoot dispatch.
@@ -474,6 +500,7 @@ jobs:
           check_single_config ".github/scripts/explain/aido-explain-config.json" "Explain"
           check_single_config ".github/scripts/suggest/aido-suggest-config.json" "Suggest"
           check_single_config ".github/scripts/test/aido-test-config.json" "Test"
+          check_single_config ".github/scripts/triage/aido-triage-config.json" "Triage"
 
           if [[ "$STATUS" == "ok" ]]; then
             REPORT="${REPORT}\nNo blocking issues detected."

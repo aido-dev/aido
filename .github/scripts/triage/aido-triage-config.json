@@ -1,0 +1,28 @@
+{
+  "provider": "GEMINI",
+  "model": {
+    "CHATGPT": "gpt-4o-mini",
+    "GEMINI": "gemini-2.5-flash",
+    "CLAUDE": "claude-3-5-sonnet-latest"
+  },
+  "language": "English",
+  "tone": "concise, pragmatic",
+  "outputFormat": "markdown",
+  "applyLabels": false,
+  "maxSimilarIssues": 5,
+  "candidateLabels": [
+    "bug",
+    "feature",
+    "enhancement",
+    "chore",
+    "refactor",
+    "documentation",
+    "security",
+    "question",
+    "needs-info",
+    "good first issue",
+    "help wanted"
+  ],
+  "severityLabels": ["severity:low", "severity:medium", "severity:high", "severity:critical"],
+  "additionalInstructions": "Be decisive but conservative — if signal is weak, prefer needs-info. Only assign severity labels when the issue clearly is security-related."
+}
