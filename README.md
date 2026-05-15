@@ -47,6 +47,9 @@ Comment these on any PR:
 - `aido test` → Structured test plan, coverage gaps, and follow-up tasks
 - `aido config-check` → Validate configs
 
+Comment these on any issue:
+- `aido triage` → Classify, suggest labels, find similar issues, recommend next steps
+
 ---
 
 ## 🚀 Quick Start
@@ -117,6 +120,9 @@ Each workflow builds a prompt from PR context (title, body, changed files, **tru
 - **Test:**
    - Script: `.github/scripts/test/aido-test.js`
    - Config: `.github/scripts/test/aido-test-config.json` *(adds `testFocus` for unit / integration / e2e / regression / performance / security / accessibility)*
+- **Triage (issues):**
+   - Script: `.github/scripts/triage/aido-triage.js`
+   - Config: `.github/scripts/triage/aido-triage-config.json` *(adds `candidateLabels`, `severityLabels`, and `applyLabels` to optionally auto-apply suggested labels; default `false`)*
 
 > Each config supports: `provider` (CHATGPT|GEMINI|CLAUDE), `model`, `language`, `tone`, `style`, `length`, `include` (title/body/filesSummary/diff), `additionalInstructions`, and an optional `promptTemplate` with placeholders.
 
@@ -143,6 +149,7 @@ Each workflow builds a prompt from PR context (title, body, changed files, **tru
 - For UI work, pair `aido explain` with `aido suggest`.
 - For releases, run `aido summarize`  → `aido docs`.
 - Before merging, run `aido test` to surface missing test cases and coverage gaps.
+- For new issues, run `aido triage` to get a quick classification, label suggestions, and similar-issue links.
 
 ---
 
