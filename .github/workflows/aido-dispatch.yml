@@ -30,8 +30,12 @@ on:
     types: [created]
 
 permissions:
+  # NOTE: this workflow dispatches to reusable workflows (e.g. aido-review.yml)
+  # that request 'pull-requests: write'. The caller's permissions must be a
+  # superset of any callee's request, so we keep write here even though the
+  # dispatch job itself only reads PR data.
   contents: read
-  pull-requests: read
+  pull-requests: write
   issues: write
 
 jobs:
