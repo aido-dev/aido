@@ -17,9 +17,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
   issues: write
-  checks: read
 
 jobs:
   aido-triage:

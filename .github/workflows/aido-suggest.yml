@@ -17,9 +17,8 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
+  pull-requests: read
   issues: write
-  checks: read
 
 jobs:
   aido-suggest:
