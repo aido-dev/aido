@@ -5,6 +5,23 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.0.7] - 2026-05-15
+### ✨ New Features
+- **triage:** Introduced the new `aido triage` command — the first Aido command that targets **issues** rather than PRs.
+  Classifies the issue (bug / feature / security / chore / question / docs), suggests labels constrained to a configurable candidate list, surfaces similar recent open issues, and recommends next steps. Optionally applies labels automatically when `applyLabels: true` is set in `aido-triage-config.json` (default: `false`). Backed by a new reusable workflow **`aido-triage.yml`**.
+
+### 🧠 Improvements & Refactorings
+- **dispatch:** Refactored `aido-dispatch.yml` to route both PR-comment and issue-comment events. Added an `is_pr` output; existing PR commands now gate on `is_pr == 'true'`, and `aido triage` gates on `is_pr == 'false'`.
+- **dispatch:** Routed `aido triage` through dispatch, added it to the help output, and included its config in `aido config-check` validation.
+
+### 🔒 Security
+- **dispatch:** Fixed a GitHub Actions script-injection vulnerability in the dispatch parse step. The attacker-controlled comment body was previously spliced into a shell script via `${{ github.event.comment.body }}`; it is now passed via an `env:` variable and quoted as `"$COMMENT_BODY"`, eliminating the injection vector. Closes #31.
+
+#### ✅ Result
+Opens Aido up to a new surface — issues — starting with `aido triage`. Ships alongside a hardening fix to the dispatcher's comment-parsing.
+
+---
+
 ## [v1.0.6] - 2026-05-13
 ### ✨ New Features
 - **test:** Introduced the new `aido test` command for generating structured test plans directly from PRs.
