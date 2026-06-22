@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Step 1: Checkout repo
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
