@@ -85,3 +85,9 @@ Controls provider, model, tone, style, included PR context, and output length.
 - Diff input is truncated (~15k chars) to keep prompts reasonable.
 - Default sections delivered: Overview, Scope, Risks, Impact, Testing, Follow-ups.
 - Summaries are designed to be **concise, high-level overviews** — not detailed documentation.
+
+---
+
+## Shared Library Requirement
+
+The script requires Aido's shared library at `.github/scripts/lib/` (providers, GitHub helpers, config loading, text utilities). Copy it from [`examples/.github/lib/`](../lib/) — the command will fail to start without it.

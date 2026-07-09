@@ -82,3 +82,9 @@ Controls provider, model, tone, style, included PR context, and guardrails.
 - Missing fields fall back to workflow defaults (see `aido-suggest.js`).
 - Diff input is truncated (~15k chars) to keep prompts reasonable.
 - Suggestions are designed to be **incremental and safe**, not sweeping rewrites.
+
+---
+
+## Shared Library Requirement
+
+The script requires Aido's shared library at `.github/scripts/lib/` (providers, GitHub helpers, config loading, text utilities). Copy it from [`examples/.github/lib/`](../lib/) — the command will fail to start without it.
