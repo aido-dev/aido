@@ -41,15 +41,16 @@
 
 const fs = require('fs');
 const path = require('path');
-const { Octokit } = require('@octokit/rest');
-
-// Environment
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const CHATGPT_API_KEY = process.env.CHATGPT_API_KEY;
-const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-const octokit = new Octokit({ auth: GITHUB_TOKEN });
+const { DEFAULT_MODELS, generate } = require('../lib/providers');
+const {
+  octokit,
+  getRepo,
+  getPrNumberFromEvent,
+  getPr,
+  getPrFiles,
+  getPrDiff,
+  getLinkedIssue,
+} = require('../lib/github');
 
 // Personas configuration
 const personasPath = path.join(__dirname, 'aido-review-config.json');
@@ -69,38 +70,10 @@ function displayLabel(p) {
   return 'AI reviewer';
 }
 
-function fillPrompt(template, context) {
-  return (template || '')
-    .replace(/{{issueTitle}}/g, context.issueTitle || '')
-    .replace(/{{issueBody}}/g, context.issueBody || '')
-    .replace(/{{prTitle}}/g, context.prTitle || '')
-    .replace(/{{prBody}}/g, context.prBody || '')
-    .replace(/{{diff}}/g, context.diff || '');
-}
-
 async function getPrContext(owner, repo, prNumber) {
-  const { data: pr } = await octokit.pulls.get({ owner, repo, pull_number: prNumber });
-
-  let issueTitle = '';
-  let issueBody = '';
-  const match = pr.body && pr.body.match(/(?:Fixes|Closes|Resolves) #(\d+)/i);
-  if (match) {
-    const issueNumber = Number(match[1]);
-    try {
-      const { data: issue } = await octokit.issues.get({ owner, repo, issue_number: issueNumber });
-      issueTitle = issue.title || '';
-      issueBody = issue.body || '';
-    } catch {
-      // ignore
-    }
-  }
-
-  const { data: diff } = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
-    owner,
-    repo,
-    pull_number: prNumber,
-    mediaType: { format: 'diff' },
-  });
+  const pr = await getPr(owner, repo, prNumber);
+  const { issueTitle, issueBody } = await getLinkedIssue(owner, repo, pr.body);
+  const diff = await getPrDiff(owner, repo, prNumber);
 
   return {
     prTitle: pr.title,
@@ -112,13 +85,8 @@ async function getPrContext(owner, repo, prNumber) {
   };
 }
 
-async function getPrFiles(owner, repo, prNumber) {
-  const files = await octokit.paginate(octokit.pulls.listFiles, {
-    owner,
-    repo,
-    pull_number: prNumber,
-    per_page: 100,
-  });
+async function getCommentableFiles(owner, repo, prNumber) {
+  const files = await getPrFiles(owner, repo, prNumber);
   const commentableFiles = files.filter((f) => f.patch && f.status !== 'removed');
 
   console.log('\n=== PR Files and Patches ===');
@@ -131,62 +99,6 @@ async function getPrFiles(owner, repo, prNumber) {
   });
 
   return commentableFiles;
-}
-
-// Provider wrappers
-async function reviewChatGPT(prompt, model = 'gpt-4o-mini') {
-  const { default: OpenAI } = await import('openai');
-  const client = new OpenAI({ apiKey: CHATGPT_API_KEY });
-  const resp = await client.chat.completions.create({
-    model,
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 1,
-  });
-  return resp.choices?.[0]?.message?.content || '';
-}
-
-async function reviewClaude(prompt, model = 'claude-3-5-sonnet-latest') {
-  const { Anthropic } = require('@anthropic-ai/sdk');
-  const anthropic = new Anthropic({ apiKey: CLAUDE_API_KEY });
-  const resp = await anthropic.messages.create({
-    model,
-    temperature: 0.2,
-    max_tokens: 1800,
-    messages: [{ role: 'user', content: prompt }],
-  });
-  return (resp.content || [])
-    .filter((p) => p.type === 'text')
-    .map((p) => p.text)
-    .join('\n');
-}
-
-async function reviewGemini(prompt, model = 'gemini-2.5-flash') {
-  const key = (GEMINI_API_KEY || '').trim();
-  const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${key}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-  });
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.map((p) => p.text).join('\n') || '';
-}
-
-/* eslint-disable-next-line no-unused-vars */
-async function runPersonaReview(persona, context) {
-  const prompt = fillPrompt(persona.prompt || '', context);
-  const provider = (persona.provider || 'GEMINI').toUpperCase();
-  const model =
-    persona.model ||
-    (provider === 'CHATGPT'
-      ? 'gpt-4o-mini'
-      : provider === 'CLAUDE'
-        ? 'claude-3-5-sonnet-latest'
-        : 'gemini-2.5-flash');
-
-  if (provider === 'CHATGPT') return reviewChatGPT(prompt, model);
-  if (provider === 'CLAUDE') return reviewClaude(prompt, model);
-  return reviewGemini(prompt, model);
 }
 
 function makeConsolidatedPrompt(personas, context) {
@@ -718,25 +630,14 @@ async function collectContextChecks(owner, repo, context, files, reviewerCfg) {
 }
 
 async function main() {
-  const repoFull = process.env.GITHUB_REPOSITORY;
-  const [owner, repo] = (repoFull || '').split('/');
-  let prNumber = null;
-
-  if (process.env.GITHUB_EVENT_PATH) {
-    const event = require(process.env.GITHUB_EVENT_PATH);
-    if (event.pull_request) {
-      prNumber = event.pull_request.number;
-    } else if (event.issue && event.issue.pull_request) {
-      const url = event.issue.pull_request.url;
-      prNumber = Number(url.split('/').pop());
-    }
-  }
+  const { owner, repo } = getRepo();
+  const prNumber = getPrNumberFromEvent();
   if (!owner || !repo || !prNumber) throw new Error('Missing PR coordinates');
 
   console.log(`Starting review for PR #${prNumber} in ${owner}/${repo}`);
 
   const context = await getPrContext(owner, repo, prNumber);
-  const files = await getPrFiles(owner, repo, prNumber);
+  const files = await getCommentableFiles(owner, repo, prNumber);
   console.log(`Found ${files.length} files to review`);
 
   // Build line maps for all files
@@ -753,31 +654,31 @@ async function main() {
   const envProvider = (process.env.AIDO_PROVIDER || '').toUpperCase();
   const envModel = process.env.AIDO_MODEL || '';
   const defaultProvider = (reviewerCfg.provider || 'GEMINI').toUpperCase();
-  const defaultModel =
-    reviewerCfg.model?.[defaultProvider] ||
-    (defaultProvider === 'CLAUDE'
-      ? 'claude-3-5-sonnet-latest'
-      : defaultProvider === 'CHATGPT'
-        ? 'gpt-4o-mini'
-        : 'gemini-2.5-flash');
+  const defaultModel = reviewerCfg.model?.[defaultProvider] || DEFAULT_MODELS[defaultProvider];
 
-  const provider = ['CLAUDE', 'CHATGPT', 'GEMINI'].includes(envProvider)
+  const configuredProvider = ['CLAUDE', 'CHATGPT', 'GEMINI'].includes(envProvider)
     ? envProvider
     : defaultProvider;
   const model = envModel || defaultModel;
 
+  // Fall back to Gemini if the configured provider's key is missing
+  const provider =
+    (configuredProvider === 'CLAUDE' && process.env.CLAUDE_API_KEY) ||
+    (configuredProvider === 'CHATGPT' && process.env.CHATGPT_API_KEY)
+      ? configuredProvider
+      : 'GEMINI';
+
   console.log(`Using provider: ${provider}, model: ${model}`);
 
-  const consolidatedPrompt = makeConsolidatedPrompt(personas, context);
+  const callProvider = (prompt) =>
+    generate(provider, prompt, {
+      model,
+      maxTokens: 1800,
+      temperature: provider === 'CHATGPT' ? 1 : 0.2,
+    });
 
-  let consolidated = '';
-  if (provider === 'CLAUDE' && CLAUDE_API_KEY) {
-    consolidated = await reviewClaude(consolidatedPrompt, model);
-  } else if (provider === 'CHATGPT' && CHATGPT_API_KEY) {
-    consolidated = await reviewChatGPT(consolidatedPrompt, model);
-  } else {
-    consolidated = await reviewGemini(consolidatedPrompt, model);
-  }
+  const consolidatedPrompt = makeConsolidatedPrompt(personas, context);
+  const consolidated = await callProvider(consolidatedPrompt);
 
   console.log('Consolidated review completed');
 
@@ -810,14 +711,7 @@ ${context.diff}
 Output ONLY valid suggestions. Skip if you cannot find the exact line.
 `.trim();
 
-  let suggestionsOnlyText = '';
-  if (provider === 'CLAUDE' && CLAUDE_API_KEY) {
-    suggestionsOnlyText = await reviewClaude(suggestionsOnlyPrompt, model);
-  } else if (provider === 'CHATGPT' && CHATGPT_API_KEY) {
-    suggestionsOnlyText = await reviewChatGPT(suggestionsOnlyPrompt, model);
-  } else {
-    suggestionsOnlyText = await reviewGemini(suggestionsOnlyPrompt, model);
-  }
+  const suggestionsOnlyText = await callProvider(suggestionsOnlyPrompt);
 
   console.log('Suggestions extraction completed');
 

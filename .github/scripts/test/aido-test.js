@@ -22,23 +22,20 @@
  * - The workflow creates a synthetic GITHUB_EVENT_PATH containing pull_request.number
  */
 
-const fs = require('fs');
 const path = require('path');
-const { Octokit } = require('@octokit/rest');
+const { DEFAULT_MODELS, generate, resolveModel } = require('../lib/providers');
+const {
+  getRepo,
+  getPrNumberFromEvent,
+  getPr,
+  getPrFiles,
+  getPrDiff,
+  postComment,
+} = require('../lib/github');
+const { loadConfig } = require('../lib/config');
+const { truncate, buildFilesSummary, fillTemplate, modelFooter } = require('../lib/text');
 
-// Environment
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const CHATGPT_API_KEY = process.env.CHATGPT_API_KEY;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
-const GITHUB_EVENT_PATH = process.env.GITHUB_EVENT_PATH;
-
-// API client
-const octokit = new Octokit({ auth: GITHUB_TOKEN });
-
-// Configuration
-const CONFIG_FILENAME = 'aido-test-config.json';
-const CONFIG_PATH = path.join(__dirname, CONFIG_FILENAME);
+const CONFIG_PATH = path.join(__dirname, 'aido-test-config.json');
 
 // Truncation limit to keep prompts under control
 const DIFF_MAX_CHARS = 15000;
@@ -46,11 +43,7 @@ const DIFF_MAX_CHARS = 15000;
 // Default configuration
 const DEFAULT_CONFIG = {
   provider: 'GEMINI', // 'CHATGPT' | 'GEMINI' | 'CLAUDE'
-  model: {
-    CHATGPT: 'gpt-4o-mini',
-    GEMINI: 'gemini-2.5-flash',
-    CLAUDE: 'claude-3-5-sonnet-latest',
-  },
+  model: { ...DEFAULT_MODELS },
   language: 'English',
   tone: 'pragmatic, quality-focused',
   length: 'medium', // 'short' | 'medium' | 'long'
@@ -81,101 +74,6 @@ const DEFAULT_CONFIG = {
   // {{testFocus}}, {{deliverFormat}}
   promptTemplate: null,
 };
-
-/**
- * Load configuration with graceful fallback to defaults.
- */
-function loadConfig() {
-  try {
-    if (fs.existsSync(CONFIG_PATH)) {
-      const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
-      const parsed = JSON.parse(raw);
-      return {
-        ...DEFAULT_CONFIG,
-        ...parsed,
-        model: { ...DEFAULT_CONFIG.model, ...(parsed.model || {}) },
-        include: { ...DEFAULT_CONFIG.include, ...(parsed.include || {}) },
-        testFocus: { ...DEFAULT_CONFIG.testFocus, ...(parsed.testFocus || {}) },
-      };
-    }
-  } catch (e) {
-    console.error(`[Aido Test] Failed to read/parse ${CONFIG_FILENAME}:`, e.message || e);
-  }
-  return DEFAULT_CONFIG;
-}
-
-/**
- * Fetch PR details, changed files, and unified diff.
- */
-async function getPrContext(owner, repo, prNumber) {
-  const { data: pr } = await octokit.pulls.get({ owner, repo, pull_number: prNumber });
-
-  const files = await octokit.paginate(octokit.pulls.listFiles, {
-    owner,
-    repo,
-    pull_number: prNumber,
-    per_page: 100,
-  });
-
-  const { data: diff } = await octokit.request('GET /repos/{owner}/{repo}/pulls/{pull_number}', {
-    owner,
-    repo,
-    pull_number: prNumber,
-    mediaType: { format: 'diff' },
-  });
-
-  return {
-    prTitle: pr.title || '',
-    prBody: pr.body || '',
-    files,
-    diff,
-  };
-}
-
-/**
- * Create compact files summary.
- */
-function buildFilesSummary(files) {
-  if (!files || files.length === 0) return 'No files changed.';
-  const lines = files.map((f) => {
-    const parts = [];
-    if (typeof f.additions === 'number' && typeof f.deletions === 'number') {
-      parts.push(`+${f.additions}/-${f.deletions}`);
-    }
-    if (f.status) parts.push(f.status);
-    return `- ${f.filename} (${parts.join(', ')})`;
-  });
-  return lines.join('\n');
-}
-
-/**
- * Truncate long strings keeping head and tail.
- */
-function truncate(str, max) {
-  if (!str) return '';
-  if (str.length <= max) return str;
-  const head = Math.floor(max * 0.7);
-  const tail = max - head - 30;
-  return `${str.slice(0, head)}\n...\n[truncated]\n...\n${str.slice(-tail)}`;
-}
-
-/**
- * Apply placeholders to a template.
- */
-function fillTemplate(template, ctx) {
-  return template
-    .replace(/{{language}}/g, ctx.language || '')
-    .replace(/{{tone}}/g, ctx.tone || '')
-    .replace(/{{length}}/g, ctx.length || '')
-    .replace(/{{style}}/g, ctx.style || '')
-    .replace(/{{outputFormat}}/g, ctx.outputFormat || '')
-    .replace(/{{prTitle}}/g, ctx.prTitle || '')
-    .replace(/{{prBody}}/g, ctx.prBody || '')
-    .replace(/{{filesSummary}}/g, ctx.filesSummary || '')
-    .replace(/{{diff}}/g, ctx.diff || '')
-    .replace(/{{testFocus}}/g, ctx.testFocus || '')
-    .replace(/{{deliverFormat}}/g, ctx.deliverFormat || '');
-}
 
 /**
  * Compose the test plan prompt.
@@ -251,10 +149,7 @@ Requirements:
     parts.push(`Additional instructions:\n${config.additionalInstructions}`);
   }
 
-  const defaultPrompt = parts.join('\n\n');
-
   if (config.promptTemplate && typeof config.promptTemplate === 'string') {
-    const testFocusSerialized = focusList;
     return fillTemplate(config.promptTemplate, {
       language,
       tone,
@@ -265,142 +160,48 @@ Requirements:
       prBody: context.prBody || '',
       filesSummary: context.filesSummary || '',
       diff: context.diff || '',
-      testFocus: testFocusSerialized,
+      testFocus: focusList,
       deliverFormat: config.deliverFormat || DEFAULT_CONFIG.deliverFormat,
     });
   }
 
-  return defaultPrompt;
-}
-
-/**
- * Provider: ChatGPT
- */
-async function generateWithChatGPT(prompt, model) {
-  if (!CHATGPT_API_KEY) throw new Error('CHATGPT_API_KEY is not set.');
-  const { default: OpenAI } = await import('openai');
-  const openai = new OpenAI({ apiKey: CHATGPT_API_KEY });
-  const resp = await openai.chat.completions.create({
-    model: model || DEFAULT_CONFIG.model.CHATGPT,
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.2,
-  });
-  const text = resp.choices?.[0]?.message?.content;
-  if (!text) throw new Error('ChatGPT returned no content.');
-  return text;
-}
-
-/**
- * Provider: Gemini
- */
-async function generateWithGemini(prompt, model) {
-  if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not set.');
-  const endpointModel = model || DEFAULT_CONFIG.model.GEMINI;
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1/models/${endpointModel}:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-    },
-  );
-  if (!res.ok) throw new Error(`Gemini HTTP ${res.status}: ${res.statusText}`);
-  const data = await res.json();
-  const text =
-    data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join('\n') ||
-    data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Gemini returned no content.');
-  return text;
-}
-
-/**
- * Provider: Claude (Anthropic)
- */
-async function generateWithClaude(prompt, model) {
-  if (!CLAUDE_API_KEY) throw new Error('CLAUDE_API_KEY is not set.');
-  let Anthropic;
-  try {
-    ({ Anthropic } = require('@anthropic-ai/sdk'));
-  } catch {
-    throw new Error("Claude selected but '@anthropic-ai/sdk' is not installed.");
-  }
-  const anthropic = new Anthropic({ apiKey: CLAUDE_API_KEY });
-  const resp = await anthropic.messages.create({
-    model: model || DEFAULT_CONFIG.model.CLAUDE,
-    max_tokens: 2000,
-    temperature: 0.2,
-    messages: [{ role: 'user', content: prompt }],
-  });
-  const content = resp?.content || [];
-  const text = content
-    .filter((p) => p && (p.text || p.type === 'text'))
-    .map((p) => p.text || '')
-    .join('\n');
-  if (!text) throw new Error('Claude returned no content.');
-  return text;
-}
-
-/**
- * Post a PR comment
- */
-async function postComment(owner, repo, prNumber, body) {
-  await octokit.issues.createComment({
-    owner,
-    repo,
-    issue_number: prNumber,
-    body,
-  });
+  return parts.join('\n\n');
 }
 
 /**
  * Main entrypoint
  */
 async function main() {
-  const repoFull = process.env.GITHUB_REPOSITORY;
-  if (!repoFull) throw new Error('GITHUB_REPOSITORY is not set.');
-  const [owner, repo] = repoFull.split('/');
+  const { owner, repo } = getRepo();
 
-  // Determine PR number from synthetic event
-  let prNumber = null;
-  if (GITHUB_EVENT_PATH && fs.existsSync(GITHUB_EVENT_PATH)) {
-    const event = require(GITHUB_EVENT_PATH);
-    if (event.pull_request && event.pull_request.number) {
-      prNumber = event.pull_request.number;
-    } else if (event.issue && event.issue.pull_request) {
-      const url = event.issue.pull_request.url;
-      prNumber = Number(url.split('/').pop());
-    }
-  }
+  const prNumber = getPrNumberFromEvent();
   if (!prNumber) throw new Error('No PR number found in event.');
 
-  // Load configuration
-  const config = loadConfig();
+  const config = loadConfig(
+    CONFIG_PATH,
+    DEFAULT_CONFIG,
+    ['model', 'include', 'testFocus'],
+    'Aido Test',
+  );
   const provider = (config.provider || 'GEMINI').toUpperCase();
+  const model = resolveModel(config, provider);
 
   // Build context
-  const { prTitle, prBody, files, diff } = await getPrContext(owner, repo, prNumber);
-  const filesSummary = buildFilesSummary(files);
-  const truncatedDiff = config.include?.diff ? truncate(diff, DIFF_MAX_CHARS) : '';
+  const pr = await getPr(owner, repo, prNumber);
+  const files = await getPrFiles(owner, repo, prNumber);
+  const diff = config.include?.diff ? await getPrDiff(owner, repo, prNumber) : '';
 
   const prompt = buildPrompt(config, {
-    prTitle,
-    prBody,
-    filesSummary: config.include?.filesSummary ? filesSummary : '',
-    diff: config.include?.diff ? truncatedDiff : '',
+    prTitle: pr.title || '',
+    prBody: pr.body || '',
+    filesSummary: config.include?.filesSummary ? buildFilesSummary(files) : '',
+    diff: truncate(diff, DIFF_MAX_CHARS),
   });
 
   // Generate test plan
   let testPlan = '';
   try {
-    if (provider === 'CHATGPT') {
-      testPlan = await generateWithChatGPT(prompt, config.model?.CHATGPT);
-    } else if (provider === 'GEMINI') {
-      testPlan = await generateWithGemini(prompt, config.model?.GEMINI);
-    } else if (provider === 'CLAUDE') {
-      testPlan = await generateWithClaude(prompt, config.model?.CLAUDE);
-    } else {
-      throw new Error(`Unknown provider: ${provider}`);
-    }
+    testPlan = await generate(provider, prompt, { model, maxTokens: 2000 });
   } catch (e) {
     await postComment(
       owner,
@@ -411,19 +212,8 @@ async function main() {
     throw e;
   }
 
-  // Post result (append provider/model footer)
   const header = '## ✅ Aido Test Plan & Gaps';
-  const modelUsed =
-    provider === 'CHATGPT'
-      ? config.model?.CHATGPT || DEFAULT_CONFIG.model.CHATGPT
-      : provider === 'CLAUDE'
-        ? config.model?.CLAUDE || DEFAULT_CONFIG.model.CLAUDE
-        : config.model?.GEMINI || DEFAULT_CONFIG.model.GEMINI;
-  const footer = `
-
-  ---
-  _Response generated using ${modelUsed}_`;
-  await postComment(owner, repo, prNumber, `${header}\n\n${testPlan}${footer}`);
+  await postComment(owner, repo, prNumber, `${header}\n\n${testPlan}${modelFooter(model)}`);
 }
 
 // Execute
