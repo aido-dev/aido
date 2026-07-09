@@ -31,16 +31,19 @@ async function generateWithChatGPT(prompt, { model, temperature = 0.2 } = {}) {
   return text;
 }
 
-async function generateWithGemini(prompt, { model } = {}) {
+async function generateWithGemini(prompt, { model, temperature } = {}) {
   const apiKey = (process.env.GEMINI_API_KEY || '').trim();
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set.');
   const endpointModel = model || DEFAULT_MODELS.GEMINI;
+  const body = { contents: [{ parts: [{ text: prompt }] }] };
+  // Opt-in only: when omitted, the API default is used (as before).
+  if (typeof temperature === 'number') body.generationConfig = { temperature };
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1/models/${endpointModel}:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      body: JSON.stringify(body),
     },
   );
   if (!res.ok) throw new Error(`Gemini HTTP ${res.status}: ${res.statusText}`);

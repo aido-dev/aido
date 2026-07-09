@@ -8,6 +8,9 @@
 const fs = require('fs');
 const { Octokit } = require('@octokit/rest');
 
+if (!process.env.GITHUB_TOKEN) {
+  console.warn('[Aido] GITHUB_TOKEN is not set — GitHub API calls will fail or be rate-limited.');
+}
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
 /** Parse owner/repo from GITHUB_REPOSITORY. */
@@ -82,7 +85,12 @@ async function getLinkedIssue(owner, repo, prBody) {
       issue_number: Number(match[1]),
     });
     return { issueTitle: issue.title || '', issueBody: issue.body || '' };
-  } catch {
+  } catch (e) {
+    // A missing issue (404) is expected — the PR body may reference a deleted
+    // or cross-repo issue. Anything else is a real API problem worth surfacing.
+    if (e.status !== 404) {
+      console.warn(`[Aido] Failed to fetch linked issue #${match[1]}:`, e.message || e);
+    }
     return { issueTitle: '', issueBody: '' };
   }
 }
