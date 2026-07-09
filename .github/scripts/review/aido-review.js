@@ -828,7 +828,11 @@ Output ONLY valid suggestions. Skip if you cannot find the exact line.
   }
 }
 
-main().catch((e) => {
-  console.error('Review failed:', e?.message || e);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((e) => {
+    console.error('Review failed:', e?.message || e);
+    process.exit(1);
+  });
+}
+
+module.exports = { buildLineMap, validateSuggestion, parseSuggestions };
