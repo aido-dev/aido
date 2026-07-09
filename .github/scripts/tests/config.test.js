@@ -1,4 +1,4 @@
-const { test } = require('node:test');
+const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -13,8 +13,14 @@ const DEFAULTS = {
   tone: 'neutral',
 };
 
+const tmpDirs = [];
+after(() => {
+  for (const dir of tmpDirs) fs.rmSync(dir, { recursive: true, force: true });
+});
+
 function tmpConfig(contents) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aido-config-test-'));
+  tmpDirs.push(dir);
   const file = path.join(dir, 'config.json');
   fs.writeFileSync(file, contents);
   return file;

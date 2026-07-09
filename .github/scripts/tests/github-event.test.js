@@ -25,6 +25,7 @@ function withEvent(payload, fn) {
   } finally {
     if (prev === undefined) delete process.env.GITHUB_EVENT_PATH;
     else process.env.GITHUB_EVENT_PATH = prev;
+    fs.rmSync(dir, { recursive: true, force: true });
   }
 }
 
