@@ -1,0 +1,37 @@
+# -----------------------------------------------------------------------------
+# Documentation:
+# - Runs the unit tests in .github/scripts/tests/ with Node's built-in test
+#   runner (node --test), no test framework dependency.
+# - Only @octokit/rest is installed: it is the sole dependency required at
+#   module load time by the code under test (AI provider SDKs are lazy-loaded
+#   and mocked/never called in tests).
+# -----------------------------------------------------------------------------
+
+name: Unit Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Install test dependencies
+        run: npm install --no-save @octokit/rest
+
+      - name: Run unit tests
+        env:
+          GITHUB_TOKEN: test-token
+        run: node --test .github/scripts/tests/*.test.js
