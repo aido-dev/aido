@@ -77,3 +77,9 @@ Controls provider, model, output style, and included PR context.
 - Missing fields fall back to workflow defaults (see `aido-docs.js`).
 - Diff input is truncated (~15k chars) to keep prompts reasonable.
 - Keep `additionalInstructions` focused — excessive text may reduce clarity.
+
+---
+
+## Shared Library Requirement
+
+The script requires Aido's shared library at `.github/scripts/lib/` (providers, GitHub helpers, config loading, text utilities). Copy it from [`examples/.github/lib/`](../lib/) — the command will fail to start without it.

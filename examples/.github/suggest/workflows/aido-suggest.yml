@@ -17,9 +17,8 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
+  pull-requests: read
   issues: write
-  checks: read
 
 jobs:
   aido-suggest:
@@ -27,10 +26,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -41,7 +40,7 @@ jobs:
       - name: Create synthetic GitHub event (PR context)
         run: |
           EVENT_FILE="$RUNNER_TEMP/aido_event.json"
-          echo "{\"pull_request\":{\"number\": ${{ inputs.pr_number }}}}" > "$EVENT_FILE"
+          echo "{\"pull_request\":{\"number\": \"${{ inputs.pr_number }}\"}}" > "$EVENT_FILE"
           echo "EVENT_FILE=$EVENT_FILE" >> $GITHUB_ENV
 
       - name: Run Aido Suggest

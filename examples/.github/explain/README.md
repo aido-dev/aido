@@ -82,3 +82,9 @@ Controls provider, model, tone, style, and included PR context.
 - Keep `additionalInstructions` focused — excessive text may reduce clarity.
 
 ---
+
+---
+
+## Shared Library Requirement
+
+The script requires Aido's shared library at `.github/scripts/lib/` (providers, GitHub helpers, config loading, text utilities). Copy it from [`examples/.github/lib/`](../lib/) — the command will fail to start without it.
