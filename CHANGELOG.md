@@ -5,6 +5,41 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.2.0] - 2026-07-17
+
+### ✨ New Features
+
+- **Remote install (one file):** Aido can now be adopted by **pinning a release tag** instead of copying ~30 files (#52). Commit a single thin workflow that delegates everything to Aido's reusable dispatcher:
+
+  ```yaml
+  jobs:
+    aido:
+      uses: aido-dev/aido/.github/workflows/aido-dispatch.yml@v1.2.0
+      with:
+        aido_ref: v1.2.0
+      secrets: ...
+  ```
+
+  - `aido-dispatch.yml` is now dual-trigger (`issue_comment` + `workflow_call`) and runs entirely in the caller's context — their event, their `GITHUB_TOKEN`, their secrets.
+  - All seven command workflows accept an optional `aido_ref` input: when set, scripts run from a checkout of `aido-dev/aido` at that ref, with the caller's `aido-*-config.json` files overlaid — **config customization without copying scripts**. When empty (the default), behavior is unchanged, so copy-based installs are unaffected.
+  - `aido config-check` detects remote installs and reports missing local configs as informational (shipped defaults apply).
+  - See the new [`examples/remote/`](examples/remote/) for setup, config overrides, upgrades, and the remote-vs-copy trade-off table. Upgrading Aido is a one-line tag bump.
+
+### 🐛 Bug Fixes
+
+- **permissions:** Restored `pull-requests: write` on the five PR-commenting workflows (`aido-summarize.yml`, `aido-explain.yml`, `aido-docs.yml`, `aido-suggest.yml`, `aido-test.yml`). The v1.0.7-era permission tightening (#42) had reduced them to `pull-requests: read`, which GitHub rejects when posting a comment on a pull request — these five commands had been unable to post results since then. Surfaced by the new remote smoke test on its first run.
+  ⚠️ **Copy-based adopters:** re-copy these five workflow files (or change `pull-requests: read` to `write` in your copies).
+
+### 🧪 Testing
+
+- **ci:** New label-gated **`remote-smoke.yml`** workflow — adding the `remote-smoke` label to a PR runs an end-to-end remote-install test (full repository reference → aido checkout at ref → config overlay → real summarize comment posted). Opt-in so it never burns provider tokens on routine CI.
+
+#### ✅ Result
+
+Aido installation drops from ~30 copied files to one pinned workflow, release tags become meaningful version pins, and a live end-to-end test guards the remote path — which already paid for itself by catching a two-month-old permissions regression.
+
+---
+
 ## [v1.1.0] - 2026-07-10
 
 ### 🧠 Improvements & Refactorings
