@@ -7,6 +7,11 @@ on:
         description: 'Pull request number to analyze for tests and gaps'
         required: true
         type: number
+      aido_ref:
+        description: "Git ref of aido-dev/aido to run Aido from (remote install). Leave empty to use this repository's own copy of the scripts."
+        required: false
+        type: string
+        default: ''
     secrets:
       CHATGPT_API_KEY:
         required: true
@@ -17,7 +22,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
   issues: write
 
 jobs:
@@ -27,6 +32,30 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Checkout Aido scripts (remote install)
+        if: inputs.aido_ref != ''
+        uses: actions/checkout@v7
+        with:
+          repository: aido-dev/aido
+          ref: ${{ inputs.aido_ref }}
+          path: .aido-remote
+
+      - name: Resolve scripts directory
+        id: aido
+        env:
+          AIDO_REF: ${{ inputs.aido_ref }}
+        run: |
+          if [ -n "$AIDO_REF" ]; then
+            # Remote install: run scripts from the aido-dev/aido checkout, but let
+            # this repository's config files (if any) override the shipped defaults.
+            if [ -d .github/scripts ]; then
+              find .github/scripts -maxdepth 2 -name 'aido-*-config.json' -exec cp --parents {} .aido-remote/ \;
+            fi
+            echo "scripts=.aido-remote/.github/scripts" >> "$GITHUB_OUTPUT"
+          else
+            echo "scripts=.github/scripts" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -50,4 +79,4 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
           GITHUB_EVENT_PATH: ${{ env.EVENT_FILE }}
-        run: node .github/scripts/test/aido-test.js
+        run: node ${{ steps.aido.outputs.scripts }}/test/aido-test.js

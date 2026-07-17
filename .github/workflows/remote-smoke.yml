@@ -1,0 +1,35 @@
+# -----------------------------------------------------------------------------
+# Remote Install Smoke Test
+# - Exercises the remote-install path end to end: calls an Aido reusable
+#   workflow by full repository reference (as an adopter's repo would) with
+#   aido_ref set, which checks out aido-dev/aido for scripts, overlays local
+#   configs, and posts a real summarize comment on the PR.
+# - Opt-in: runs only when the 'remote-smoke' label is added to a PR, so it
+#   never burns provider tokens on routine CI.
+# - The pinned ref below should track the default branch; point it at a feature
+#   branch temporarily when validating changes to the remote-install mechanism.
+# -----------------------------------------------------------------------------
+
+name: Remote Install Smoke Test
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  remote-summarize:
+    name: Remote Summarize (smoke)
+    if: github.event.label.name == 'remote-smoke'
+    uses: aido-dev/aido/.github/workflows/aido-summarize.yml@main
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+      aido_ref: main
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}

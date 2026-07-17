@@ -1,0 +1,34 @@
+# Aido — remote install (single file)
+#
+# Copy this ONE file to .github/workflows/aido.yml in your repository, add your
+# provider API key(s) as repository secrets, and comment `aido help` on any PR
+# or issue. No other files needed — workflows and scripts run from the pinned
+# aido-dev/aido release.
+#
+# To upgrade Aido, bump the tag in BOTH places below (`uses:` and `aido_ref:`).
+# To customize a command, add a config file in your repository at
+# .github/scripts/<command>/aido-<command>-config.json — it overrides the
+# shipped defaults (see aido-dev/aido's .github/scripts/ for the format).
+
+name: Aido
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  aido:
+    # Cheap pre-filter: only spin up the dispatcher for `aido ...` comments.
+    if: startsWith(github.event.comment.body, 'aido')
+    uses: aido-dev/aido/.github/workflows/aido-dispatch.yml@v1.2.0
+    with:
+      aido_ref: v1.2.0
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
