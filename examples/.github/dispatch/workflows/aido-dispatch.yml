@@ -424,7 +424,8 @@ jobs:
           STATUS="ok"
           REPORT="🧪 Aido Config Check\n\n"
           if [ -n "$AIDO_REF" ]; then
-            REPORT="${REPORT}ℹ️ Remote install detected (aido_ref: $AIDO_REF). Missing local config files are fine — Aido's shipped defaults apply. Add a config under .github/scripts/<command>/ to customize.\n\n"
+            REPORT="${REPORT}ℹ️ Remote install detected (aido_ref: $AIDO_REF). Missing local config files are fine — "
+            REPORT="${REPORT}Aido's shipped defaults apply. Add a config under .github/scripts/<command>/ to customize.\n\n"
           fi
 
           warn() { REPORT="${REPORT}- [WARN] $1\n"; }
