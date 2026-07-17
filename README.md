@@ -60,14 +60,23 @@ Comment these on any issue:
 
 ## 🚀 Quick Start
 
+### Option A — Remote install (one file, recommended)
+
 1. Add repository secrets:
    - `GEMINI_API_KEY` (default provider)
    - `CHATGPT_API_KEY` (if using ChatGPT)
    - `CLAUDE_API_KEY` (if using Claude)
+2. Copy [`examples/remote/aido.yml`](examples/remote/aido.yml) to `.github/workflows/aido.yml` — a single thin workflow that runs Aido from a pinned release tag. Upgrading is a one-line tag bump.
+3. Comment `aido review` on a PR.
+4. (Optional) Customize any command by adding its config file (e.g. `.github/scripts/review/aido-review-config.json`) — overrides the shipped defaults, no scripts needed. See [`examples/remote/`](examples/remote/) for details.
+
+### Option B — Copy-based install (full control)
+
+1. Add repository secrets (as above).
 2. Commit workflows (`.github/workflows/*`) and scripts (`.github/scripts/*`).
    ⚠️ Make sure to include `.github/scripts/lib/` — all command scripts depend on this shared library.
 3. Comment `aido review` on a PR.
-4. (Optional) Customize configs in `aido-*-config.json`.
+4. (Optional) Customize configs in `aido-*-config.json` — or the prompts and scripts themselves.
 
 ---
 
