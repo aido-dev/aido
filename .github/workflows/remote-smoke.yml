@@ -25,10 +25,10 @@ jobs:
   remote-summarize:
     name: Remote Summarize (smoke)
     if: github.event.label.name == 'remote-smoke'
-    uses: aido-dev/aido/.github/workflows/aido-summarize.yml@feat/remote-workflows
+    uses: aido-dev/aido/.github/workflows/aido-summarize.yml@main
     with:
       pr_number: ${{ github.event.pull_request.number }}
-      aido_ref: feat/remote-workflows
+      aido_ref: main
     secrets:
       CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
