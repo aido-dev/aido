@@ -1,7 +1,14 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { DEFAULT_MODELS, generate, generateWithGemini, resolveModel } = require('../lib/providers');
+const {
+  DEFAULT_MODELS,
+  generate,
+  generateWithGemini,
+  resolveModel,
+  isRetryable,
+  withRetry,
+} = require('../lib/providers');
 
 function withEnv(overrides, fn) {
   const saved = {};
@@ -115,4 +122,88 @@ test('generateWithGemini throws when the response has no content', async () => {
       () => assert.rejects(generateWithGemini('p'), /Gemini returned no content/),
     ),
   );
+});
+
+test('isRetryable recognizes transient statuses and messages', () => {
+  assert.equal(isRetryable({ status: 503 }), true);
+  assert.equal(isRetryable({ status: 429 }), true);
+  assert.equal(isRetryable(new Error('Gemini HTTP 502: Bad Gateway')), true);
+  assert.equal(isRetryable({ status: 400 }), false);
+  assert.equal(isRetryable(new Error('GEMINI_API_KEY is not set.')), false);
+  assert.equal(isRetryable(null), false);
+});
+
+test('withRetry retries transient failures then succeeds', async () => {
+  let calls = 0;
+  const result = await withRetry(
+    async () => {
+      calls++;
+      if (calls < 3) {
+        const e = new Error('overloaded');
+        e.status = 503;
+        throw e;
+      }
+      return 'ok';
+    },
+    { baseDelayMs: 0 },
+  );
+  assert.equal(result, 'ok');
+  assert.equal(calls, 3); // failed twice, succeeded on the third
+});
+
+test('withRetry gives up after exhausting retries', async () => {
+  let calls = 0;
+  await assert.rejects(
+    withRetry(
+      async () => {
+        calls++;
+        const e = new Error('still down');
+        e.status = 503;
+        throw e;
+      },
+      { retries: 2, baseDelayMs: 0 },
+    ),
+    /still down/,
+  );
+  assert.equal(calls, 3); // initial + 2 retries
+});
+
+test('withRetry does not retry non-transient errors', async () => {
+  let calls = 0;
+  await assert.rejects(
+    withRetry(
+      async () => {
+        calls++;
+        throw new Error('bad request'); // no status, not an HTTP 5xx/429 message
+      },
+      { baseDelayMs: 0 },
+    ),
+    /bad request/,
+  );
+  assert.equal(calls, 1);
+});
+
+test('generate retries a transient Gemini 503 then returns text', async () => {
+  await withEnv({ GEMINI_API_KEY: 'test-key' }, () => {
+    let calls = 0;
+    return withMockedFetch(
+      async () => {
+        calls++;
+        if (calls === 1) return { ok: false, status: 503, statusText: 'Service Unavailable' };
+        return {
+          ok: true,
+          json: async () => ({ candidates: [{ content: { parts: [{ text: 'recovered' }] } }] }),
+        };
+      },
+      async () => {
+        const text = await generate('GEMINI', 'p', { baseDelayMs: 0 });
+        assert.equal(text, 'recovered');
+        assert.equal(calls, 2);
+      },
+    );
+  });
+});
+
+test('generate still rejects unknown providers without retrying', async () => {
+  await assert.rejects(generate('BOGUS', 'p', { baseDelayMs: 0 }), /Unknown provider: BOGUS/);
 });

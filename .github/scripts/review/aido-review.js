@@ -711,9 +711,21 @@ ${context.diff}
 Output ONLY valid suggestions. Skip if you cannot find the exact line.
 `.trim();
 
-  const suggestionsOnlyText = await callProvider(suggestionsOnlyPrompt);
-
-  console.log('Suggestions extraction completed');
+  // The consolidated review body already succeeded above. Treat the separate
+  // suggestions pass as best-effort: if it fails (e.g. a transient provider
+  // error that outlasts retries), still post the review body rather than
+  // discarding the whole review.
+  let suggestionsOnlyText = '';
+  let suggestionsError = null;
+  try {
+    suggestionsOnlyText = await callProvider(suggestionsOnlyPrompt);
+    console.log('Suggestions extraction completed');
+  } catch (e) {
+    suggestionsError = e;
+    console.error(
+      `Suggestions pass failed; posting review body without inline suggestions: ${e?.message || e}`,
+    );
+  }
 
   let suggestions = parseSuggestions(suggestionsOnlyText, files);
   console.log(`Parsed ${suggestions.length} initial suggestions`);
@@ -783,6 +795,13 @@ Output ONLY valid suggestions. Skip if you cannot find the exact line.
 
   if (Array.isArray(contextFindings) && contextFindings.length) {
     consolidatedBody += '\n\n## Context Checks\n' + contextFindings.map((f) => `- ${f}`).join('\n');
+  }
+
+  if (suggestionsError) {
+    consolidatedBody +=
+      '\n\n> ⚠️ Inline code suggestions were skipped — the suggestion pass failed' +
+      ` after retries (${suggestionsError.message || suggestionsError}). The review above is unaffected;` +
+      ' re-run `aido review` to retry suggestions.';
   }
 
   const reviewEvent = comments.length > 0 ? 'REQUEST_CHANGES' : 'COMMENT';
