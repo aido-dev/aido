@@ -58,6 +58,32 @@ Comment these on any issue:
 
 ---
 
+## 🤖 Auto-run on AI-authored PRs
+
+When an AI agent (Copilot, Claude Code, Cursor, …) opens a pull request, Aido can
+**run automatically** — no comment needed — so a human can quickly understand and
+digest code they didn't write.
+
+- Add `.github/workflows/aido-auto.yml` (copy-based) or `examples/remote/aido-auto.yml` (remote install).
+- Configure which authors trigger it and which commands run in `.github/scripts/auto/aido-auto-config.json`.
+- **Companion-first defaults:** `explain` + `summarize`. Add `review`, `docs`, or `test` to the `commands` list to run more.
+- Fires on `pull_request` (not `pull_request_target`), so forked PRs stay safe (read-only token, no secrets).
+
+```jsonc
+// .github/scripts/auto/aido-auto-config.json
+{
+  "enabled": true,
+  "aiAuthors": ["copilot", "claude-code[bot]", "cursor[bot]"],
+  "commands": ["explain", "summarize"],
+}
+```
+
+> Note: `github-actions[bot]` and `dependabot[bot]` are excluded by default —
+> the former is too broad, and Dependabot PRs run with a read-only token and no
+> repo secrets, so Aido can't act on them. Add them explicitly at your own risk.
+
+---
+
 ## 🚀 Quick Start
 
 ### Option A — Remote install (one file, recommended)

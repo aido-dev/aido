@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "aiAuthors": [
+    "copilot",
+    "copilot[bot]",
+    "claude[bot]",
+    "claude-code[bot]",
+    "cursor[bot]",
+    "devin[bot]",
+    "sweep-ai[bot]"
+  ],
+  "commands": ["explain", "summarize"]
+}
