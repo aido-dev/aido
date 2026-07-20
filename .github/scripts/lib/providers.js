@@ -16,6 +16,51 @@ const DEFAULT_MODELS = {
   CLAUDE: 'claude-3-5-sonnet-latest',
 };
 
+// Transient HTTP statuses worth retrying: rate limits and upstream/overload
+// errors (Gemini's free tier returns 503 under load fairly often).
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Whether an error looks transient and worth retrying. Recognizes both a
+ * numeric `status` (OpenAI/Anthropic SDK errors) and an "HTTP <code>" message
+ * (our Gemini fetch wrapper).
+ */
+function isRetryable(err) {
+  if (!err) return false;
+  if (typeof err.status === 'number' && RETRYABLE_STATUS.has(err.status)) return true;
+  const m = /\bHTTP (\d{3})\b/.exec(err.message || '');
+  return m ? RETRYABLE_STATUS.has(Number(m[1])) : false;
+}
+
+/**
+ * Run `fn`, retrying transient failures with exponential backoff.
+ * Non-retryable errors (missing key, unknown provider, 4xx) throw immediately.
+ * opts: { retries = 2, baseDelayMs = 500, onRetry }
+ */
+async function withRetry(fn, { retries = 2, baseDelayMs = 500, onRetry } = {}) {
+  const note =
+    onRetry ||
+    ((err, attempt, delay) =>
+      console.warn(
+        `[Aido] Provider call failed (${err.message || err}); retry ${attempt}/${retries} in ${delay}ms`,
+      ));
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt === retries || !isRetryable(err)) throw err;
+      const delay = baseDelayMs * 2 ** attempt;
+      note(err, attempt + 1, delay);
+      await sleep(delay);
+    }
+  }
+  throw lastErr;
+}
+
 async function generateWithChatGPT(prompt, { model, temperature = 0.2 } = {}) {
   const apiKey = process.env.CHATGPT_API_KEY;
   if (!apiKey) throw new Error('CHATGPT_API_KEY is not set.');
@@ -46,7 +91,11 @@ async function generateWithGemini(prompt, { model, temperature } = {}) {
       body: JSON.stringify(body),
     },
   );
-  if (!res.ok) throw new Error(`Gemini HTTP ${res.status}: ${res.statusText}`);
+  if (!res.ok) {
+    const err = new Error(`Gemini HTTP ${res.status}: ${res.statusText}`);
+    err.status = res.status;
+    throw err;
+  }
   const data = await res.json();
   const text =
     data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join('\n') ||
@@ -80,14 +129,20 @@ async function generateWithClaude(prompt, { model, maxTokens = 2000, temperature
 }
 
 /**
- * Dispatch to the given provider ('CHATGPT' | 'GEMINI' | 'CLAUDE').
- * opts: { model, maxTokens, temperature } — maxTokens applies to Claude only.
+ * Dispatch to the given provider ('CHATGPT' | 'GEMINI' | 'CLAUDE'), retrying
+ * transient failures.
+ * opts: { model, maxTokens, temperature } — maxTokens applies to Claude only —
+ * plus retry controls { retries, baseDelayMs, onRetry }.
  */
 async function generate(provider, prompt, opts = {}) {
-  if (provider === 'CHATGPT') return generateWithChatGPT(prompt, opts);
-  if (provider === 'GEMINI') return generateWithGemini(prompt, opts);
-  if (provider === 'CLAUDE') return generateWithClaude(prompt, opts);
-  throw new Error(`Unknown provider: ${provider}`);
+  const { retries, baseDelayMs, onRetry, ...providerOpts } = opts;
+  const call = () => {
+    if (provider === 'CHATGPT') return generateWithChatGPT(prompt, providerOpts);
+    if (provider === 'GEMINI') return generateWithGemini(prompt, providerOpts);
+    if (provider === 'CLAUDE') return generateWithClaude(prompt, providerOpts);
+    return Promise.reject(new Error(`Unknown provider: ${provider}`));
+  };
+  return withRetry(call, { retries, baseDelayMs, onRetry });
 }
 
 /** Resolve the model for a provider from a config's model map, falling back to defaults. */
@@ -102,4 +157,6 @@ module.exports = {
   generateWithGemini,
   generateWithClaude,
   resolveModel,
+  isRetryable,
+  withRetry,
 };
