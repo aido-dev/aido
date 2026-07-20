@@ -1,0 +1,30 @@
+# Aido Auto — companion for AI-authored PRs (remote install)
+#
+# Optional second workflow (alongside aido.yml). Copy to
+# .github/workflows/aido-auto.yml. When an AI/bot agent opens a PR, Aido runs
+# a configured set of commands automatically (default: explain + summarize) so
+# a human can quickly understand and digest code they didn't write.
+#
+# Configure which authors trigger it and which commands run by committing
+# .github/scripts/auto/aido-auto-config.json in your repo (see aido-dev/aido).
+#
+# To upgrade, bump the tag in BOTH places below (`uses:` and `aido_ref:`).
+
+name: Aido Auto
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  aido-auto:
+    uses: aido-dev/aido/.github/workflows/aido-auto.yml@v1.3.0
+    with:
+      aido_ref: v1.3.0
+    secrets:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

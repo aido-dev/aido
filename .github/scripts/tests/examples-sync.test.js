@@ -26,10 +26,16 @@ const SYNCED_PAIRS = [
   ['.github/scripts/suggest/aido-suggest.js', 'examples/.github/suggest/scripts/aido-suggest.js'],
   ['.github/scripts/review/aido-review.js', 'examples/.github/review/scripts/aido-review.js'],
   ['.github/scripts/docs/aido-docs.js', 'examples/.github/docs/scripts/docs/aido-docs.js'],
+  ['.github/scripts/auto/aido-auto.js', 'examples/.github/auto/scripts/aido-auto.js'],
+  [
+    '.github/scripts/auto/aido-auto-config.json',
+    'examples/.github/auto/scripts/aido-auto-config.json',
+  ],
   [
     '.github/workflows/aido-summarize.yml',
     'examples/.github/summarize/workflows/aido-summarize.yml',
   ],
+  ['.github/workflows/aido-auto.yml', 'examples/.github/auto/workflows/aido-auto.yml'],
   ['.github/workflows/aido-explain.yml', 'examples/.github/explain/workflows/aido-explain.yml'],
   ['.github/workflows/aido-suggest.yml', 'examples/.github/suggest/workflows/aido-suggest.yml'],
   ['.github/workflows/aido-review.yml', 'examples/.github/review/workflows/aido-review.yml'],
