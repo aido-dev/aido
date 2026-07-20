@@ -5,6 +5,21 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.2.1] - 2026-07-20
+
+### 🐛 Bug Fixes
+
+- **providers:** AI provider calls now **retry transient failures** with exponential backoff (statuses `429, 500, 502, 503, 504`) instead of failing on the first blip (#54). Google Gemini's free tier returns `503 Service Unavailable` under load fairly often; a single one previously aborted the whole command. Applies to every command via `lib/providers.js`.
+- **review:** The `aido review` suggestions pass is now **best-effort**. `aido review` makes two provider calls (the consolidated review body, then a separate inline-suggestions pass); previously a transient failure on the second call discarded the entire review, including the body that had already succeeded. Now the review body still posts, with a note that inline suggestions were skipped and can be retried.
+
+Both were surfaced by live dogfooding on the aido-web repo (the first external adopter of the v1.2.0 one-file install). The v1.1.0 "fail loudly" behavior is preserved: exhausted retries and non-transient errors still throw with actionable messages.
+
+#### ✅ Result
+
+`aido review` (and every other command) rides out the transient provider errors that used to fail runs outright — and when the inline-suggestions pass can't complete, you still get the review instead of nothing.
+
+---
+
 ## [v1.2.0] - 2026-07-17
 
 ### ✨ New Features
