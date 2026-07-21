@@ -1,0 +1,24 @@
+# Example: run `aido review` as a step on every pull request, using the
+# Marketplace composite action. Copy to .github/workflows/ in your repo.
+
+name: Aido Review (action)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aido-dev/aido@v1
+        with:
+          command: review
+          pr_number: ${{ github.event.pull_request.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

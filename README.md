@@ -87,6 +87,33 @@ digest code they didn't write.
 
 ---
 
+## 🧩 Use Aido as a GitHub Action (a step in your workflow)
+
+Prefer to control exactly when Aido runs? Add it as a **step** in your own
+workflow — the Marketplace-published composite action:
+
+```yaml
+- uses: aido-dev/aido@v1
+  with:
+    command: review # review | summarize | explain | docs | suggest | test | triage
+    pr_number: ${{ github.event.pull_request.number }}
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+```
+
+For `triage`, pass `issue_number` instead of `pr_number`. See
+[`examples/action/`](examples/action/) for full workflows.
+
+> Two ways to run Aido — pick per use case:
+>
+> - **Reusable workflows / one-file install** (below) → the comment-driven UX
+>   (`aido review` on a PR) and auto-run on AI-authored PRs.
+> - **This composite action** → run a specific command as a step, on your own
+>   triggers (e.g. review every PR on `pull_request`).
+
+---
+
 ## 🚀 Quick Start
 
 ### Option A — Remote install (one file, recommended)
