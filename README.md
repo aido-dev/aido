@@ -1,6 +1,6 @@
 # 🚀 Meet AIDO
 
-**Your AI-powered, multi-provider, multi-modal coding assistant for GitHub PRs.**
+**The AI companion for the pull requests your AI writes.**
 
 [![GitHub release](https://img.shields.io/github/v/release/aido-dev/aido?style=flat-square)](https://github.com/aido-dev/aido/releases)
 ![Aido Dispatch](https://github.com/aido-dev/aido/actions/workflows/aido-dispatch.yml/badge.svg)
@@ -12,20 +12,20 @@
 ![Supports ChatGPT](https://img.shields.io/badge/provider-ChatGPT-10a37f?logo=openai&style=flat-square)
 ![Supports Claude](https://img.shields.io/badge/provider-Claude-8a2be2?style=flat-square)
 
-Aido lets you **review, summarize, explain, document, and improve code** by simply commenting on a PR.
-It works with **Gemini, ChatGPT, and Claude**, right inside GitHub Actions.
+AI agents — Copilot, Claude Code, Cursor — are opening more and more pull requests, and a human still has to understand code they didn't write. Aido keeps that human in the loop: when an **AI-authored PR** lands, it can **automatically explain, summarize, review, and document** the change. And you can run those same commands on **any PR or issue on demand** — just comment `aido <command>`.
+
+One companion, the whole review lifecycle: **review, summarize, explain, document, test, and triage** — with **Gemini, ChatGPT, or Claude**, right inside GitHub Actions. Install with a single workflow file.
 
 ---
 
 ## ✨ Highlights
 
-- ⚡ On-demand PR reviews via comments (`aido review`, `aido summarize`, etc.)
-- 🤖 Multi-provider support: Gemini (default), ChatGPT, Claude
-- 🧩 Consolidated reviewer guided by personas (single LLM call)
-- 🧷 Applyable inline PR suggestions with **robust validation** (zero false positives, no code blocks in the body)
-- 🕵️ Optional context-aware checks (cross-file references, PR description consistency)
-- 📦 Pre-built persona packs in `/examples/.github/review/example personas/`
-- 🔧 Fully configurable prompts, tones, styles, and output formats
+- 🤖 **Auto-companion for AI-authored PRs** — when Copilot / Claude Code / Cursor open a PR, Aido runs automatically (explain + summarize by default; review/docs/test opt-in)
+- ⚡ **On-demand on any PR or issue** — `aido review`, `summarize`, `explain`, `docs`, `suggest`, `test`, `triage`
+- 🧩 Consolidated, persona-guided reviewer with **applyable inline suggestions** (robust validation, zero false positives)
+- 🔌 **Multi-provider, bring-your-own-key:** Gemini (default), ChatGPT, Claude — no third-party data processor
+- 📦 **One-file install** from a pinned release tag; upgrading is a one-line bump
+- 🔧 Fully configurable prompts, personas, tones, and per-command models
 
 ---
 
@@ -131,8 +131,7 @@ digest code they didn't write.
 
 ## ❤️ Why Aido?
 
-Aido makes **AI-powered PR reviews** practical, configurable, and team-friendly.
-Save time, catch issues early, and improve code quality — without leaving GitHub.
+As more of your PRs are written by AI, Aido makes sure a human still understands them — automatically, and on demand. It's practical, configurable, and team-friendly: save time, catch issues early, and keep everyone in the loop — without leaving GitHub.
 
 ---
 
