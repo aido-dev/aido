@@ -1,0 +1,24 @@
+# Example: run `aido triage` as a step when an issue is opened, using the
+# Marketplace composite action. Copy to .github/workflows/ in your repo.
+
+name: Aido Triage (action)
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aido-dev/aido@v1
+        with:
+          command: triage
+          issue_number: ${{ github.event.issue.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

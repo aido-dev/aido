@@ -1,0 +1,38 @@
+# -----------------------------------------------------------------------------
+# Composite Action Smoke Test
+# - Exercises the root action.yml end to end via a local `uses: ./` reference:
+#   checkout -> composite action -> aido-action.js -> command script -> posts a
+#   summarize comment on the PR.
+# - Opt-in: runs only when the 'action-smoke' label is added to a PR, so it
+#   never burns provider tokens on routine CI.
+# -----------------------------------------------------------------------------
+
+name: Action Smoke Test
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  action-summarize:
+    name: Action Summarize (smoke)
+    if: github.event.label.name == 'action-smoke'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Run Aido via composite action
+        uses: ./
+        with:
+          command: summarize
+          pr_number: ${{ github.event.pull_request.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}

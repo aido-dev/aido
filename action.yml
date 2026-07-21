@@ -1,0 +1,61 @@
+# Aido — composite GitHub Action.
+#
+# Run any Aido command as a step in your own workflow. This is the Marketplace
+# entry point; for the comment-driven experience (aido review, auto-run on
+# AI-authored PRs, etc.) use the reusable workflows / one-file install instead
+# (see the README).
+#
+# Example:
+#   - uses: aido-dev/aido@v1
+#     with:
+#       command: review
+#       pr_number: ${{ github.event.pull_request.number }}
+#     env:
+#       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+name: 'Aido'
+description: 'The AI companion for the pull requests your AI writes — review, summarize, explain, document, test, and triage, on any PR or issue.'
+author: 'aido-dev'
+
+branding:
+  icon: 'git-pull-request'
+  color: 'purple'
+
+inputs:
+  command:
+    description: 'Which Aido command to run: review | summarize | explain | docs | suggest | test | triage'
+    required: true
+  pr_number:
+    description: 'Pull request number (required for review/summarize/explain/docs/suggest/test)'
+    required: false
+    default: ''
+  issue_number:
+    description: 'Issue number (required for triage)'
+    required: false
+    default: ''
+  node-version:
+    description: 'Node.js version to run Aido with'
+    required: false
+    default: '20'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install Aido dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm install --no-save openai @octokit/rest @google/generative-ai @anthropic-ai/sdk
+
+    - name: Run Aido command
+      shell: bash
+      env:
+        AIDO_COMMAND: ${{ inputs.command }}
+        AIDO_PR_NUMBER: ${{ inputs.pr_number }}
+        AIDO_ISSUE_NUMBER: ${{ inputs.issue_number }}
+      run: node "${{ github.action_path }}/.github/scripts/action/aido-action.js"
