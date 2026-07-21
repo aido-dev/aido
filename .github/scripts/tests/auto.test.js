@@ -63,3 +63,41 @@ test('default AI authors exclude github-actions and dependabot', () => {
   assert.ok(!DEFAULT_CONFIG.aiAuthors.includes('github-actions[bot]'));
   assert.ok(!DEFAULT_CONFIG.aiAuthors.some((a) => a.startsWith('dependabot')));
 });
+
+test('decide skips an AI PR carrying a skip label (case-insensitive)', () => {
+  const result = decide(DEFAULT_CONFIG, 'claude-code[bot]', { labels: ['No-Aido'] });
+  assert.equal(result.run, false);
+  assert.equal(result.reason, 'skipped-label');
+  assert.deepEqual(result.commands, []);
+});
+
+test('decide skips an AI PR whose body has the skip marker', () => {
+  const result = decide(DEFAULT_CONFIG, 'claude-code[bot]', {
+    body: 'Automated change.\n\n<!-- aido: skip -->\n',
+  });
+  assert.equal(result.run, false);
+  assert.equal(result.reason, 'skipped-marker');
+});
+
+test('decide accepts label objects or strings when checking skip labels', () => {
+  const asObjects = decide(DEFAULT_CONFIG, 'claude-code[bot]', { labels: ['no-aido'] });
+  assert.equal(asObjects.reason, 'skipped-label');
+});
+
+test('decide runs an AI PR with no skip label or marker', () => {
+  const result = decide(DEFAULT_CONFIG, 'claude-code[bot]', {
+    labels: ['enhancement'],
+    body: 'A normal PR body.',
+  });
+  assert.equal(result.run, true);
+  assert.equal(result.reason, 'ok');
+});
+
+test('decide ignores skip labels/markers on human PRs (author checked first)', () => {
+  const result = decide(DEFAULT_CONFIG, 'a-human-dev', { labels: ['no-aido'] });
+  assert.equal(result.reason, 'author-not-ai');
+});
+
+test('default config exposes a no-aido skip label', () => {
+  assert.ok(DEFAULT_CONFIG.skipLabels.includes('no-aido'));
+});

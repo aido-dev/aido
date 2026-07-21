@@ -9,5 +9,6 @@
     "devin[bot]",
     "sweep-ai[bot]"
   ],
-  "commands": ["explain", "summarize"]
+  "commands": ["explain", "summarize"],
+  "skipLabels": ["no-aido"]
 }
