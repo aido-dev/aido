@@ -5,6 +5,16 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.3.1] - 2026-07-21
+
+### 🐛 Bug Fixes
+
+- **auto:** Fixed the auto-companion never running its commands (#59). `aido-auto.yml` passed the PR number as a job output — always a **string** — to command workflows that declare `pr_number` as `type: number`. GitHub type-checks reusable-workflow inputs, so the `explain`/`summarize` jobs failed to instantiate and the run failed before they started. Wrapped the value in `fromJSON()` to convert it back to a number. (The v1.3.0 gate logic was correct; only the hand-off to the command workflows was broken.) Surfaced by dogfooding the feature on a real repo.
+
+⚠️ **If you added `aido-auto.yml` on v1.3.0, upgrade to v1.3.1** — the feature could not run any commands on v1.3.0.
+
+---
+
 ## [v1.3.0] - 2026-07-21
 
 ### ✨ New Features
