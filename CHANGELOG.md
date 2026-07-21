@@ -5,6 +5,32 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.4.0] - 2026-07-21
+
+### ✨ New Features
+
+- **action:** Aido can now run as a **composite GitHub Action** — a step in your own workflow (#73):
+
+  ```yaml
+  - uses: aido-dev/aido@v1
+    with:
+      command: review
+      pr_number: ${{ github.event.pull_request.number }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  ```
+
+  This is the entry point for a **GitHub Marketplace** listing (reusable workflows can't be listed; only Actions can). It's a complement to the comment-driven reusable workflows / one-file install, not a replacement — use the action to run a specific command on your own triggers (e.g. review every PR on `pull_request`), and the workflows for the `aido <command>` comment UX and auto-run on AI-authored PRs.
+  - Root `action.yml` (branding `git-pull-request` / purple; inputs `command`, `pr_number`, `issue_number`, `node-version`) plus an entrypoint that routes to the same command scripts the workflows use.
+  - Example workflows in `examples/action/` and a new README section.
+
+#### ✅ Result
+
+Three ways to run Aido now — comment-driven workflows, one-file remote install, and a step-based Marketplace action — covering on-demand, automatic, and custom-trigger use cases.
+
+---
+
 ## [v1.3.2] - 2026-07-21
 
 ### ✨ New Features
