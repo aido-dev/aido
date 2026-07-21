@@ -26,6 +26,8 @@ const SYNCED_PAIRS = [
   ['.github/scripts/suggest/aido-suggest.js', 'examples/.github/suggest/scripts/aido-suggest.js'],
   ['.github/scripts/review/aido-review.js', 'examples/.github/review/scripts/aido-review.js'],
   ['.github/scripts/docs/aido-docs.js', 'examples/.github/docs/scripts/docs/aido-docs.js'],
+  ['.github/scripts/triage/aido-triage.js', 'examples/.github/triage/scripts/aido-triage.js'],
+  ['.github/scripts/test/aido-test.js', 'examples/.github/test/scripts/aido-test.js'],
   ['.github/scripts/auto/aido-auto.js', 'examples/.github/auto/scripts/aido-auto.js'],
   [
     '.github/scripts/auto/aido-auto-config.json',
@@ -40,6 +42,8 @@ const SYNCED_PAIRS = [
   ['.github/workflows/aido-suggest.yml', 'examples/.github/suggest/workflows/aido-suggest.yml'],
   ['.github/workflows/aido-review.yml', 'examples/.github/review/workflows/aido-review.yml'],
   ['.github/workflows/aido-docs.yml', 'examples/.github/docs/workflows/aido-docs.yml'],
+  ['.github/workflows/aido-triage.yml', 'examples/.github/triage/workflows/aido-triage.yml'],
+  ['.github/workflows/aido-test.yml', 'examples/.github/test/workflows/aido-test.yml'],
   ['.github/workflows/aido-dispatch.yml', 'examples/.github/dispatch/workflows/aido-dispatch.yml'],
 ];
 
