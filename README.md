@@ -67,6 +67,8 @@ digest code they didn't write.
 - Add `.github/workflows/aido-auto.yml` (copy-based) or `examples/remote/aido-auto.yml` (remote install).
 - Configure which authors trigger it and which commands run in `.github/scripts/auto/aido-auto-config.json`.
 - **Companion-first defaults:** `explain` + `summarize`. Add `review`, `docs`, or `test` to the `commands` list to run more.
+- **Only AI-authored PRs trigger it** (per `aiAuthors`); human PRs are never auto-run. It fires on PR open/reopen/ready — **not on every commit**.
+- **Per-PR opt-out:** add a `no-aido` label (configurable via `skipLabels`) or put `<!-- aido: skip -->` in the PR body to skip a single PR — no config change needed.
 - Fires on `pull_request` (not `pull_request_target`), so forked PRs stay safe (read-only token, no secrets).
 
 ```jsonc
@@ -75,6 +77,7 @@ digest code they didn't write.
   "enabled": true,
   "aiAuthors": ["copilot", "claude-code[bot]", "cursor[bot]"],
   "commands": ["explain", "summarize"],
+  "skipLabels": ["no-aido"],
 }
 ```
 

@@ -44,7 +44,14 @@ const DEFAULT_CONFIG = {
   // Commands to run automatically. Companion-first defaults: help the human
   // understand and digest the change. Add 'review' to also review, etc.
   commands: ['explain', 'summarize'],
+  // Per-PR opt-out: any of these labels on a PR suppresses the auto-run for
+  // that PR only (case-insensitive). A `<!-- aido: skip -->` marker in the PR
+  // body does the same. Neither requires a config change to use.
+  skipLabels: ['no-aido'],
 };
+
+// PR-body marker that suppresses the auto-run for a single PR.
+const SKIP_MARKER = /<!--\s*aido:\s*skip\s*-->/i;
 
 /** Case-insensitive exact or 'prefix*' match of an author against patterns. */
 function authorMatches(author, patterns) {
@@ -56,13 +63,27 @@ function authorMatches(author, patterns) {
   });
 }
 
-/** Decide whether to run and which commands, given config and PR author. */
-function decide(config, author) {
+/**
+ * Decide whether to run and which commands.
+ * @param config parsed config
+ * @param author PR author login
+ * @param context optional { labels: string[], body: string } for per-PR opt-out
+ */
+function decide(config, author, context = {}) {
   if (!config || config.enabled === false) {
     return { run: false, reason: 'disabled', commands: [] };
   }
   if (!authorMatches(author, config.aiAuthors)) {
     return { run: false, reason: 'author-not-ai', commands: [] };
+  }
+  // Per-PR opt-out (only relevant once we know it's an AI-authored PR).
+  const { labels = [], body = '' } = context;
+  const skipLabels = (config.skipLabels || []).map((l) => String(l).toLowerCase());
+  if (labels.map((l) => String(l).toLowerCase()).some((l) => skipLabels.includes(l))) {
+    return { run: false, reason: 'skipped-label', commands: [] };
+  }
+  if (SKIP_MARKER.test(body || '')) {
+    return { run: false, reason: 'skipped-marker', commands: [] };
   }
   const commands = (config.commands || []).filter((c) => KNOWN_COMMANDS.includes(c));
   return {
@@ -89,8 +110,12 @@ function main() {
   const pr = event && event.pull_request;
   const author = pr && pr.user && pr.user.login;
   const number = pr && pr.number;
+  const labels = ((pr && pr.labels) || [])
+    .map((l) => (typeof l === 'string' ? l : l && l.name))
+    .filter(Boolean);
+  const body = (pr && pr.body) || '';
 
-  const result = decide(config, author);
+  const result = decide(config, author, { labels, body });
 
   const lines = [
     `run=${result.run}`,
