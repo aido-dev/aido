@@ -5,6 +5,26 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.3.2] - 2026-07-21
+
+### ✨ New Features
+
+- **auto:** Per-PR opt-out for the auto-companion (#61). Auto-run stays the default on AI-authored PRs, but any single PR can now be skipped without a config change:
+  - a **`no-aido` label** (configurable via the `skipLabels` config option), or
+  - a **`<!-- aido: skip -->` marker** in the PR body.
+
+  The gate checks these only once a PR is confirmed AI-authored (human PRs already skip), logging `skipped-label` / `skipped-marker`. There is deliberately no opt-in/label-only mode — requiring a label to run would defeat the point of an automatic companion.
+
+### 🧹 Chores
+
+- **actions:** Bumped `actions/setup-node` from v6 to v7 across all workflows and example copies (#62, superseding Dependabot #56). `node-version: '20'` stays pinned, so the Node runtime is unchanged.
+
+#### ✅ Result
+
+The auto-companion is now safe to run default-on: it only touches AI-authored PRs, never fires on every commit, and any individual PR can opt out with a label or a body marker.
+
+---
+
 ## [v1.3.1] - 2026-07-21
 
 ### 🐛 Bug Fixes
