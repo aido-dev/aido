@@ -14,8 +14,8 @@
 #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 #       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
-name: 'Aido'
-description: 'The AI companion for the pull requests your AI writes — review, summarize, explain, document, test, and triage, on any PR or issue.'
+name: 'Aido AI PR Companion'
+description: 'The AI companion for the PRs your AI writes: review, summarize, explain, document, test, and triage.'
 author: 'aido-dev'
 
 branding:

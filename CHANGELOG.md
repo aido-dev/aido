@@ -5,6 +5,14 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.4.1] - 2026-07-21
+
+### 🐛 Bug Fixes
+
+- **action:** Make the composite action publishable to the GitHub Marketplace. The validator requires a globally unique action name (bare `Aido` collided with an existing name) and a description under 125 characters. Renamed the action to **Aido AI PR Companion** and shortened the description. No functional change — `uses: aido-dev/aido@v1` is unaffected (the `name:` is only the Marketplace display name).
+
+---
+
 ## [v1.4.0] - 2026-07-21
 
 ### ✨ New Features
