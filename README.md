@@ -3,6 +3,7 @@
 **The AI companion for the pull requests your AI writes.**
 
 [![GitHub release](https://img.shields.io/github/v/release/aido-dev/aido?style=flat-square)](https://github.com/aido-dev/aido/releases)
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Aido%20AI%20PR%20Companion-6f42c1?logo=github&style=flat-square)](https://github.com/marketplace/actions/aido-ai-pr-companion)
 ![Aido Dispatch](https://github.com/aido-dev/aido/actions/workflows/aido-dispatch.yml/badge.svg)
 ![Unit Tests](https://github.com/aido-dev/aido/actions/workflows/unit-tests.yml/badge.svg)
 ![GitHub License](https://img.shields.io/github/license/aido-dev/aido)
