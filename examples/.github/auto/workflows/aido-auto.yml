@@ -1,0 +1,147 @@
+# -----------------------------------------------------------------------------
+# Aido Auto — companion for AI-authored PRs
+#
+# When an AI/bot agent (Copilot, Claude Code, Cursor, …) opens a pull request,
+# automatically run a configured set of Aido commands so a human can quickly
+# understand, digest, and review code they didn't write. Which authors trigger
+# it and which commands run are configured in
+# .github/scripts/auto/aido-auto-config.json (defaults: explain + summarize).
+#
+# Two ways to use it:
+#   • Copy-based install: this file lives in your repo and fires on pull_request.
+#   • Remote install: a thin caller in your repo fires on pull_request and calls
+#     this workflow with `aido_ref` (see examples/remote/aido-auto.yml).
+# -----------------------------------------------------------------------------
+
+name: Aido Auto
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+  workflow_call:
+    inputs:
+      aido_ref:
+        description: "Git ref of aido-dev/aido to run Aido from (remote install). Leave empty to use the calling repository's own copy of the scripts."
+        required: false
+        type: string
+        default: ''
+    secrets:
+      CHATGPT_API_KEY:
+        required: false
+      GEMINI_API_KEY:
+        required: false
+      CLAUDE_API_KEY:
+        required: false
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  gate:
+    name: Gate (AI author?)
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.gate.outputs.run }}
+      pr_number: ${{ steps.gate.outputs.pr_number }}
+      explain: ${{ steps.gate.outputs.explain }}
+      summarize: ${{ steps.gate.outputs.summarize }}
+      review: ${{ steps.gate.outputs.review }}
+      docs: ${{ steps.gate.outputs.docs }}
+      test: ${{ steps.gate.outputs.test }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Checkout Aido scripts (remote install)
+        if: inputs.aido_ref != ''
+        uses: actions/checkout@v7
+        with:
+          repository: aido-dev/aido
+          ref: ${{ inputs.aido_ref }}
+          path: .aido-remote
+
+      - name: Resolve scripts directory
+        id: aido
+        env:
+          AIDO_REF: ${{ inputs.aido_ref }}
+        run: |
+          if [ -n "$AIDO_REF" ]; then
+            if [ -d .github/scripts/auto ]; then
+              find .github/scripts/auto -maxdepth 1 -name 'aido-auto-config.json' \
+                -exec cp --parents {} .aido-remote/ \;
+            fi
+            echo "scripts=.aido-remote/.github/scripts" >> "$GITHUB_OUTPUT"
+          else
+            echo "scripts=.github/scripts" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Decide whether to auto-run Aido
+        id: gate
+        run: node ${{ steps.aido.outputs.scripts }}/auto/aido-auto.js
+
+  explain:
+    name: Aido Explain
+    needs: gate
+    if: needs.gate.outputs.run == 'true' && needs.gate.outputs.explain == 'true'
+    uses: ./.github/workflows/aido-explain.yml
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+    with:
+      pr_number: ${{ needs.gate.outputs.pr_number }}
+      aido_ref: ${{ inputs.aido_ref || '' }}
+
+  summarize:
+    name: Aido Summarize
+    needs: gate
+    if: needs.gate.outputs.run == 'true' && needs.gate.outputs.summarize == 'true'
+    uses: ./.github/workflows/aido-summarize.yml
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+    with:
+      pr_number: ${{ needs.gate.outputs.pr_number }}
+      aido_ref: ${{ inputs.aido_ref || '' }}
+
+  review:
+    name: Aido Review
+    needs: gate
+    if: needs.gate.outputs.run == 'true' && needs.gate.outputs.review == 'true'
+    uses: ./.github/workflows/aido-review.yml
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+    with:
+      pr_number: ${{ needs.gate.outputs.pr_number }}
+      aido_ref: ${{ inputs.aido_ref || '' }}
+
+  docs:
+    name: Aido Docs
+    needs: gate
+    if: needs.gate.outputs.run == 'true' && needs.gate.outputs.docs == 'true'
+    uses: ./.github/workflows/aido-docs.yml
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+    with:
+      pr_number: ${{ needs.gate.outputs.pr_number }}
+      aido_ref: ${{ inputs.aido_ref || '' }}
+
+  test:
+    name: Aido Test
+    needs: gate
+    if: needs.gate.outputs.run == 'true' && needs.gate.outputs.test == 'true'
+    uses: ./.github/workflows/aido-test.yml
+    secrets:
+      CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+    with:
+      pr_number: ${{ needs.gate.outputs.pr_number }}
+      aido_ref: ${{ inputs.aido_ref || '' }}

@@ -5,6 +5,21 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.3.0] - 2026-07-21
+
+### ✨ New Features
+
+- **auto:** Aido can now **run automatically on AI-authored pull requests** (#57). When a configured AI/bot agent (Copilot, Claude Code, Cursor, …) opens a PR, Aido runs a configurable set of commands — no comment needed — so a human can quickly understand and digest code they didn't write. This is the companion-first take on the rising tide of AI-written PRs: default commands are `explain` + `summarize` (add `review`, `docs`, `test` to run more).
+  - New workflow **`aido-auto.yml`** (dual-trigger: `pull_request` for copy-based installs, `workflow_call` with `aido_ref` for remote installs) and a dependency-free gate script `aido-auto.js` with config `aido-auto-config.json` (`enabled`, `aiAuthors`, `commands`).
+  - Remote install: add the optional second thin workflow `examples/remote/aido-auto.yml` alongside `aido.yml`.
+  - **Safety:** fires on `pull_request` (not `pull_request_target`), so forked PRs run with a read-only token and no secrets. `github-actions[bot]` and `dependabot[bot]` are excluded by default (too broad / read-only token + no secrets on Dependabot PRs); add them explicitly if wanted. Author matching is case-insensitive and supports `prefix*` wildcards.
+
+#### ✅ Result
+
+Aido stops being purely on-demand: the PRs your AI writes get an automatic companion pass (explain + summarize by default), keeping a human in the loop on code they didn't author — without anyone remembering to comment.
+
+---
+
 ## [v1.2.1] - 2026-07-20
 
 ### 🐛 Bug Fixes
