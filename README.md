@@ -7,7 +7,7 @@
 ![Aido Dispatch](https://github.com/aido-dev/aido/actions/workflows/aido-dispatch.yml/badge.svg)
 ![Unit Tests](https://github.com/aido-dev/aido/actions/workflows/unit-tests.yml/badge.svg)
 ![GitHub License](https://img.shields.io/github/license/aido-dev/aido)
-[![Demo PRs](https://img.shields.io/badge/Demo%20PRs-See%20examples-6f42c1?style=flat-square)](https://github.com/aido-dev/aido/pulls)
+[![Demo PRs](https://img.shields.io/badge/Demo%20PRs-See%20it%20live-6f42c1?style=flat-square)](#-see-it-live-no-install)
 
 ![Supports Gemini](https://img.shields.io/badge/provider-Gemini-blue?logo=google&style=flat-square)
 ![Supports ChatGPT](https://img.shields.io/badge/provider-ChatGPT-10a37f?logo=openai&style=flat-square)
@@ -16,6 +16,78 @@
 AI agents — Copilot, Claude Code, Cursor — are opening more and more pull requests, and a human still has to understand code they didn't write. Aido keeps that human in the loop: when an **AI-authored PR** lands, it can **automatically explain, summarize, review, and document** the change. And you can run those same commands on **any PR or issue on demand** — just comment `aido <command>`.
 
 One companion, the whole review lifecycle: **review, summarize, explain, document, test, and triage** — with **Gemini, ChatGPT, or Claude**, right inside GitHub Actions. Install with a single workflow file.
+
+<!--
+  DEMO GIF — once docs/media/aido-demo.gif exists, UNCOMMENT the <p> block below to
+  render it in the hero. Record a short (~15–25s) loop showing Aido in action:
+    1. An AI-authored PR opens (or you type `aido review` in a PR comment box).
+    2. The GitHub Actions run kicks off (brief).
+    3. Aido posts its review — scroll the inline suggestions + faceted notes.
+  Keep it tight; loop the payoff (the posted comment), not the waiting.
+
+<p align="center">
+  <img src="docs/media/aido-demo.gif" alt="Aido reviewing a pull request, live in GitHub" width="820">
+</p>
+-->
+
+---
+
+## 👀 See it live (no install)
+
+These are **real Aido comments** on demo PRs — click any command to see the full,
+rendered output in GitHub:
+
+| Command | What it does | Live demo |
+|---|---|---|
+| `aido review` | Multi-persona review + digest, inline applyable suggestions | [PR #64](https://github.com/aido-dev/aido/pull/64) |
+| `aido suggest` | Concrete improvements & small refactors | [PR #65](https://github.com/aido-dev/aido/pull/65) |
+| `aido test` | Test plan, coverage gaps, follow-ups | [PR #66](https://github.com/aido-dev/aido/pull/66) |
+| `aido explain` | Developer-focused step-by-step walkthrough | [PR #67](https://github.com/aido-dev/aido/pull/67) |
+| `aido summarize` | High-level summary for stakeholders | [PR #68](https://github.com/aido-dev/aido/pull/68) |
+| `aido docs` | Draft/augment documentation | [PR #69](https://github.com/aido-dev/aido/pull/69) |
+
+<details>
+<summary><b>Sample: <code>aido review</code> catching real bugs</b> (from PR #64)</summary>
+
+> This PR introduces several common Python anti-patterns and security vulnerabilities, including a mutable default argument, SQL injection, and a bare `except` clause. Addressing these issues will significantly improve the code's robustness, security, and maintainability.
+>
+> **Recommendation:** Request changes
+>
+> **Faceted Notes:**
+> - **Security:** Critical SQL injection vulnerability; bare `except` masks errors and potential security issues.
+> - **Correctness:** Mutable default argument leads to unexpected state; missing input validation for order dictionary keys.
+> - **Maintainability:** Use of "magic numbers" reduces readability and makes updates difficult.
+> - **QA/Testing:** Bare `except` swallows all errors, making specific failure modes hard to test.
+
+Code fixes are delivered as **inline "Apply suggestion" buttons** on the diff — not dumped in the comment body.
+</details>
+
+<details>
+<summary><b>Sample: <code>aido explain</code> walking through unfamiliar code</b> (from PR #67)</summary>
+
+> ### Token-Bucket Rate Limiter
+>
+> **Intent** — Control the rate at which operations run. Uncontrolled access can lead to resource exhaustion, instability, or abuse. The token-bucket allows short bursts (while tokens last) while enforcing a long-term average rate.
+>
+> **Design choices**
+> - **`time.monotonic()` for timestamps** — immune to wall-clock/NTP adjustments that could unfairly reset a limit.
+> - **"Lazy" continuous refill** — tokens are recomputed on each `allow()` call instead of by a background thread, avoiding thread overhead.
+> - **Capacity cap** — `min(capacity, …)` stops tokens accumulating indefinitely.
+>
+> **Risks & edge cases** — not thread-safe (`tokens`/`updated` mutated without a lock); single-process only (no distributed limiting); `refill_per_sec = 0` degrades to a fixed budget.
+
+Aido reads the diff and explains intent, mechanics, design rationale, **and** the risks — so a human understands code they didn't write.
+</details>
+
+---
+
+## ⏱️ 60-second start
+
+1. Add a `GEMINI_API_KEY` repo secret ([free key](https://aistudio.google.com/apikey) — _Settings → Secrets and variables → Actions_).
+2. Copy [`examples/remote/aido.yml`](examples/remote/aido.yml) → `.github/workflows/aido.yml` (one file).
+3. Comment `aido review` on any PR.
+
+That's it — Aido replies right in the PR. [Full install options ↓](#-quick-start)
 
 ---
 
