@@ -17,18 +17,9 @@ AI agents — Copilot, Claude Code, Cursor — are opening more and more pull re
 
 One companion, the whole review lifecycle: **review, summarize, explain, document, test, and triage** — with **Gemini, ChatGPT, or Claude**, right inside GitHub Actions. Install with a single workflow file.
 
-<!--
-  DEMO GIF — once docs/media/aido-demo.gif exists, UNCOMMENT the <p> block below to
-  render it in the hero. Record a short (~15–25s) loop showing Aido in action:
-    1. An AI-authored PR opens (or you type `aido review` in a PR comment box).
-    2. The GitHub Actions run kicks off (brief).
-    3. Aido posts its review — scroll the inline suggestions + faceted notes.
-  Keep it tight; loop the payoff (the posted comment), not the waiting.
-
 <p align="center">
   <img src="docs/media/aido-demo.gif" alt="Aido reviewing a pull request, live in GitHub" width="820">
 </p>
--->
 
 ---
 
