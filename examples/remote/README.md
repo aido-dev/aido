@@ -9,14 +9,15 @@ workflows, pinned to a release tag:
 ```yaml
 jobs:
   aido:
-    uses: aido-dev/aido/.github/workflows/aido-dispatch.yml@v1.2.0
+    uses: aido-dev/aido/.github/workflows/aido-dispatch.yml@v1
     with:
-      aido_ref: v1.2.0
+      aido_ref: v1
     secrets: ...
 ```
 
-The pinned tag is your version: upgrading Aido is a one-line change, and your
-repository never drifts out of sync with Aido's scripts.
+The moving `v1` tag tracks the latest v1.x release, so you stay current
+automatically. Prefer to pin an exact release (e.g. `@v1.4.1`)? Set the same
+tag in both `uses:` and `aido_ref:` — upgrading is then a one-line change.
 
 > Requires Aido **v1.2.0 or later** (the first release with remote-install support).
 
@@ -56,9 +57,11 @@ customize. `aido config-check` validates them and knows about remote installs.
 
 ## Upgrading
 
-Bump the tag in both places in `aido.yml` (`uses:` and `aido_ref:`), e.g.
-`v1.2.0` → `v1.3.0`. Check the [releases](https://github.com/aido-dev/aido/releases)
-and [CHANGELOG](https://github.com/aido-dev/aido/blob/main/CHANGELOG.md) for
+With the default `@v1` pin you get the latest v1.x automatically — no action
+needed. If you pinned an exact release, bump the tag in both places in
+`aido.yml` (`uses:` and `aido_ref:`), e.g. `v1.4.1` → `v1.5.0`. Check the
+[releases](https://github.com/aido-dev/aido/releases) and
+[CHANGELOG](https://github.com/aido-dev/aido/blob/main/CHANGELOG.md) for
 breaking changes.
 
 ## Remote vs copy-based install
