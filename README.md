@@ -272,7 +272,9 @@ Each workflow builds a prompt from PR context (title, body, changed files, **tru
   - Script: `.github/scripts/triage/aido-triage.js`
   - Config: `.github/scripts/triage/aido-triage-config.json` _(adds `candidateLabels`, `severityLabels`, and `applyLabels` to optionally auto-apply suggested labels; default `false`)_
 
-> Each config supports: `provider` (CHATGPT|GEMINI|CLAUDE), `model`, `language`, `tone`, `style`, `length`, `include` (title/body/filesSummary/diff), `additionalInstructions`, and an optional `promptTemplate` with placeholders.
+> Each config supports: `provider` (CHATGPT|GEMINI|CLAUDE), `model` (a provider-keyed map, e.g. `"model": { "CLAUDE": "claude-opus-5" }`), `language`, `tone`, `style`, `length`, `include` (title/body/filesSummary/diff), `additionalInstructions`, and an optional `promptTemplate` with placeholders.
+>
+> **Choosing a model:** set `model` per provider. Any current Claude model works — Opus (4.6 / 4.7 / 4.8 / 5), Fable 5, Sonnet 4.6, Haiku 4.5. Aido sends no sampling `temperature` to Claude (recent models manage it internally and reject the parameter), so the latest models work out of the box.
 
 ---
 
@@ -308,6 +310,7 @@ Each workflow builds a prompt from PR context (title, body, changed files, **tru
 
 - Diff is truncated (~15k chars) to keep prompts efficient.
 - Provider/model availability and naming can change; set explicit models in configs.
+- Sampling `temperature` is only sent to ChatGPT and Gemini — current Claude models (Opus 4.7+/Fable 5) reject it, so Aido omits it for Claude and lets the model default apply.
 - Forked PRs may lack secrets → provider calls may be skipped.
 
 ---
