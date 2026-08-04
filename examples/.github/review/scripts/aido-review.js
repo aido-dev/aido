@@ -670,12 +670,14 @@ async function main() {
 
   console.log(`Using provider: ${provider}, model: ${model}`);
 
-  const callProvider = (prompt) =>
-    generate(provider, prompt, {
-      model,
-      maxTokens: 1800,
-      temperature: provider === 'CHATGPT' ? 1 : 0.2,
-    });
+  const callProvider = (prompt) => {
+    const opts = { model, maxTokens: 1800 };
+    // ChatGPT and Gemini accept a sampling temperature; newer Claude models
+    // (Opus 4.7+ / Fable 5) removed it and 400 if it's sent, so omit it there.
+    if (provider === 'CHATGPT') opts.temperature = 1;
+    else if (provider === 'GEMINI') opts.temperature = 0.2;
+    return generate(provider, prompt, opts);
+  };
 
   const consolidatedPrompt = makeConsolidatedPrompt(personas, context);
   const consolidated = await callProvider(consolidatedPrompt);
