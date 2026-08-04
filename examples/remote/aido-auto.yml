@@ -8,7 +8,9 @@
 # Configure which authors trigger it and which commands run by committing
 # .github/scripts/auto/aido-auto-config.json in your repo (see aido-dev/aido).
 #
-# To upgrade, bump the tag in BOTH places below (`uses:` and `aido_ref:`).
+# Pinned to the moving `v1` tag: you get the latest v1.x automatically. To pin
+# an exact release instead, set the same tag in BOTH places below (`uses:` and
+# `aido_ref:`), e.g. `@v1.4.1`.
 
 name: Aido Auto
 
@@ -23,8 +25,8 @@ permissions:
 
 jobs:
   aido-auto:
-    uses: aido-dev/aido/.github/workflows/aido-auto.yml@v1.3.0
+    uses: aido-dev/aido/.github/workflows/aido-auto.yml@v1
     with:
-      aido_ref: v1.3.0
+      aido_ref: v1
     secrets:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

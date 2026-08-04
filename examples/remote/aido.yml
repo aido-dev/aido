@@ -5,7 +5,9 @@
 # or issue. No other files needed — workflows and scripts run from the pinned
 # aido-dev/aido release.
 #
-# To upgrade Aido, bump the tag in BOTH places below (`uses:` and `aido_ref:`).
+# Pinned to the moving `v1` tag: you get the latest v1.x automatically. To pin
+# an exact release instead, set the same tag in BOTH places below (`uses:` and
+# `aido_ref:`), e.g. `@v1.4.1`.
 # To customize a command, add a config file in your repository at
 # .github/scripts/<command>/aido-<command>-config.json — it overrides the
 # shipped defaults (see aido-dev/aido's .github/scripts/ for the format).
@@ -25,9 +27,9 @@ jobs:
   aido:
     # Cheap pre-filter: only spin up the dispatcher for `aido ...` comments.
     if: startsWith(github.event.comment.body, 'aido')
-    uses: aido-dev/aido/.github/workflows/aido-dispatch.yml@v1.2.0
+    uses: aido-dev/aido/.github/workflows/aido-dispatch.yml@v1
     with:
-      aido_ref: v1.2.0
+      aido_ref: v1
     secrets:
       CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
