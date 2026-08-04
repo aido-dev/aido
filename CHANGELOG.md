@@ -11,6 +11,10 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 - **providers:** Make the sampling `temperature` opt-in for the Claude provider, so Aido works with current Anthropic models (#80). Opus 4.7, 4.8, 5, and Fable 5 removed sampling parameters and reject `temperature` with a `400` — Aido previously hard-coded it (`0.2`), which broke every Claude command (review, summarize, explain, docs, suggest, test, triage) on those models. Now `temperature` is sent only when explicitly configured (matching the Gemini provider). Older Claude models are unaffected (they use the API default).
 
+### 📦 Release
+
+- The `v1.4.2` and `v1` tags are **lightweight** tags. They were briefly cut as annotated tags, which broke GitHub Actions' resolution of the reusable dispatch workflow's `./` sibling calls — Actions resolved the relative `uses:` against the tag object rather than the underlying commit, failing with `aido-explain.yml … workflow was not found`. Republished as lightweight tags (matching `v1.4.0` / `v1.4.1`); remote installs pinned to `@v1.4.2` or the moving `@v1` resolve correctly.
+
 ---
 
 ## [v1.4.1] - 2026-07-21
