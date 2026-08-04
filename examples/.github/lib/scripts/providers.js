@@ -104,7 +104,7 @@ async function generateWithGemini(prompt, { model, temperature } = {}) {
   return text;
 }
 
-async function generateWithClaude(prompt, { model, maxTokens = 2000, temperature = 0.2 } = {}) {
+async function generateWithClaude(prompt, { model, maxTokens = 2000, temperature } = {}) {
   const apiKey = process.env.CLAUDE_API_KEY;
   if (!apiKey) throw new Error('CLAUDE_API_KEY is not set.');
   let Anthropic;
@@ -114,12 +114,16 @@ async function generateWithClaude(prompt, { model, maxTokens = 2000, temperature
     throw new Error("Claude selected but '@anthropic-ai/sdk' is not installed.");
   }
   const anthropic = new Anthropic({ apiKey });
-  const resp = await anthropic.messages.create({
+  const params = {
     model: model || DEFAULT_MODELS.CLAUDE,
     max_tokens: maxTokens,
-    temperature,
     messages: [{ role: 'user', content: prompt }],
-  });
+  };
+  // Opt-in only: newer Claude models (Opus 4.7+ / Fable 5) removed sampling
+  // params and reject `temperature` with a 400, so only send it when a caller
+  // explicitly asks for it. Mirrors the Gemini generator above.
+  if (typeof temperature === 'number') params.temperature = temperature;
+  const resp = await anthropic.messages.create(params);
   const text = (resp?.content || [])
     .filter((p) => p && (p.text || p.type === 'text'))
     .map((p) => p.text || '')

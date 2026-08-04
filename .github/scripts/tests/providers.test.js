@@ -1,10 +1,12 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
+const Module = require('node:module');
 const {
   DEFAULT_MODELS,
   generate,
   generateWithGemini,
+  generateWithClaude,
   resolveModel,
   isRetryable,
   withRetry,
@@ -120,6 +122,59 @@ test('generateWithGemini throws when the response has no content', async () => {
     withMockedFetch(
       async () => ({ ok: true, json: async () => ({ candidates: [] }) }),
       () => assert.rejects(generateWithGemini('p'), /Gemini returned no content/),
+    ),
+  );
+});
+
+// Intercepts `require('@anthropic-ai/sdk')` so the Claude path can be tested
+// without the SDK installed. `create` receives the params passed to
+// `messages.create`, letting a test assert on the request body.
+async function withMockedAnthropic(create, fn) {
+  const original = Module._load;
+  Module._load = function (request, ...rest) {
+    if (request === '@anthropic-ai/sdk') {
+      return {
+        Anthropic: class {
+          constructor() {
+            this.messages = { create };
+          }
+        },
+      };
+    }
+    return original.call(this, request, ...rest);
+  };
+  try {
+    return await fn();
+  } finally {
+    Module._load = original;
+  }
+}
+
+test('generateWithClaude omits temperature by default (newer models 400 on it)', async () => {
+  await withEnv({ CLAUDE_API_KEY: 'test-key' }, () =>
+    withMockedAnthropic(
+      async (params) => {
+        assert.equal('temperature' in params, false);
+        assert.equal(params.model, 'claude-opus-5');
+        assert.equal(params.messages[0].content, 'the prompt');
+        return { content: [{ type: 'text', text: 'reviewed' }] };
+      },
+      async () => {
+        const text = await generateWithClaude('the prompt', { model: 'claude-opus-5' });
+        assert.equal(text, 'reviewed');
+      },
+    ),
+  );
+});
+
+test('generateWithClaude sends temperature only when explicitly given', async () => {
+  await withEnv({ CLAUDE_API_KEY: 'test-key' }, () =>
+    withMockedAnthropic(
+      async (params) => {
+        assert.equal(params.temperature, 0.2);
+        return { content: [{ type: 'text', text: 'ok' }] };
+      },
+      () => generateWithClaude('p', { model: 'claude-opus-4-6', temperature: 0.2 }),
     ),
   );
 });
