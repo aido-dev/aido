@@ -201,7 +201,11 @@ async function main() {
   // Generate test plan
   let testPlan = '';
   try {
-    testPlan = await generate(provider, prompt, { model, maxTokens: 2000 });
+    testPlan = await generate(provider, prompt, {
+      model,
+      baseURL: config.baseURL,
+      maxTokens: 2000,
+    });
   } catch (e) {
     await postComment(
       owner,

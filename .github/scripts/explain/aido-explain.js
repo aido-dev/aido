@@ -147,7 +147,11 @@ async function main() {
   // Generate explanation
   let explanation = '';
   try {
-    explanation = await generate(provider, prompt, { model, maxTokens: 1600 });
+    explanation = await generate(provider, prompt, {
+      model,
+      baseURL: config.baseURL,
+      maxTokens: 1600,
+    });
   } catch (e) {
     await postComment(
       owner,

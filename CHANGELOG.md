@@ -5,6 +5,24 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.5.0] - 2026-08-06
+
+### ✨ New Features
+
+- **providers:** Add a generic **OpenAI-compatible** provider (`provider: "OPENAI"`). Any endpoint that speaks the OpenAI `/chat/completions` API — **DeepSeek, Kimi (Moonshot), Grok (xAI), Mistral, OpenRouter**, and self-hosted gateways — now works with one config: set `baseURL` to the endpoint, `model` to the model, and put the key in the new `OPENAI_API_KEY` secret. Available across every command (review, summarize, explain, docs, suggest, test, triage). `temperature` is opt-in, so reasoning-style endpoints that reject it still work.
+
+  ```jsonc
+  {
+    "reviewer": {
+      "provider": "OPENAI",
+      "baseURL": "https://api.deepseek.com",
+      "model": { "OPENAI": "deepseek-chat" },
+    },
+  }
+  ```
+
+---
+
 ## [v1.4.2] - 2026-08-04
 
 ### 🐛 Bug Fixes

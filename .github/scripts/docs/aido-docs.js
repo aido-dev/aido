@@ -165,7 +165,7 @@ async function main() {
   // Generate docs content
   let docs = '';
   try {
-    docs = await generate(provider, prompt, { model, maxTokens: 2000 });
+    docs = await generate(provider, prompt, { model, baseURL: config.baseURL, maxTokens: 2000 });
   } catch (e) {
     await postComment(
       owner,

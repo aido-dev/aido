@@ -656,7 +656,7 @@ async function main() {
   const defaultProvider = (reviewerCfg.provider || 'GEMINI').toUpperCase();
   const defaultModel = reviewerCfg.model?.[defaultProvider] || DEFAULT_MODELS[defaultProvider];
 
-  const configuredProvider = ['CLAUDE', 'CHATGPT', 'GEMINI'].includes(envProvider)
+  const configuredProvider = ['CLAUDE', 'CHATGPT', 'GEMINI', 'OPENAI'].includes(envProvider)
     ? envProvider
     : defaultProvider;
   const model = envModel || defaultModel;
@@ -664,7 +664,8 @@ async function main() {
   // Fall back to Gemini if the configured provider's key is missing
   const provider =
     (configuredProvider === 'CLAUDE' && process.env.CLAUDE_API_KEY) ||
-    (configuredProvider === 'CHATGPT' && process.env.CHATGPT_API_KEY)
+    (configuredProvider === 'CHATGPT' && process.env.CHATGPT_API_KEY) ||
+    (configuredProvider === 'OPENAI' && process.env.OPENAI_API_KEY)
       ? configuredProvider
       : 'GEMINI';
 
@@ -676,6 +677,7 @@ async function main() {
     // (Opus 4.7+ / Fable 5) removed it and 400 if it's sent, so omit it there.
     if (provider === 'CHATGPT') opts.temperature = 1;
     else if (provider === 'GEMINI') opts.temperature = 0.2;
+    else if (provider === 'OPENAI') opts.baseURL = reviewerCfg.baseURL;
     return generate(provider, prompt, opts);
   };
 

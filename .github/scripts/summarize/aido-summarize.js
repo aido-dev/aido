@@ -146,7 +146,11 @@ async function main() {
   // Generate summary via selected provider
   let summaryText = '';
   try {
-    summaryText = await generate(provider, prompt, { model, maxTokens: 1000 });
+    summaryText = await generate(provider, prompt, {
+      model,
+      baseURL: config.baseURL,
+      maxTokens: 1000,
+    });
   } catch (e) {
     // Post error for visibility and rethrow
     await postComment(
