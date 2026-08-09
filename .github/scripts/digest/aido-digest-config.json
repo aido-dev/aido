@@ -1,0 +1,21 @@
+{
+  "provider": "GEMINI",
+  "model": { "GEMINI": "gemini-2.5-flash" },
+  "lookbackDays": 7,
+  "maxPrs": 40,
+  "label": "digest",
+  "title": "What shipped",
+  "language": "English",
+  "tone": "neutral, professional",
+  "length": "medium",
+  "skipEmpty": true,
+  "aiAuthors": [
+    "copilot",
+    "copilot[bot]",
+    "claude[bot]",
+    "claude-code[bot]",
+    "cursor[bot]",
+    "devin[bot]",
+    "sweep-ai[bot]"
+  ]
+}
