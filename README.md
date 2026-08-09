@@ -113,6 +113,18 @@ That's it — Aido replies right in the PR. [Full install options ↓](#-quick-s
 
 ---
 
+## 🆓 Free to run
+
+Aido has **no hosted service and no third-party data processor** — it runs on **GitHub Actions' free minutes** with **your own provider key**. Several providers have free tiers, so you can get **free AI PR reviews**:
+
+- **Google Gemini** _(Aido's default)_ — grab a free key at **[Google AI Studio](https://aistudio.google.com/apikey)** and add it as the `GEMINI_API_KEY` secret. That's the whole [60-second start](#-60-second-start).
+- **Mistral** — free **"Experiment"** tier at **[console.mistral.ai](https://console.mistral.ai)**. Use the OpenAI-compatible provider (`provider: "OPENAI"`, `baseURL: "https://api.mistral.ai/v1"`) with the key as `OPENAI_API_KEY` — see [Bring any model](#bring-any-model-openai-compatible).
+- **Other OpenAI-compatible endpoints** with free tiers work the same way (e.g. OpenRouter `:free` models, Groq, Cerebras) — check each provider's current limits.
+
+> Free tiers are **rate-limited** — fine for most repos; for a busy one, a paid key avoids throttling.
+
+---
+
 ## 📝 Example Commands
 
 Comment these on any PR:
