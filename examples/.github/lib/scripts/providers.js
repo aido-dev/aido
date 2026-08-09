@@ -76,6 +76,30 @@ async function generateWithChatGPT(prompt, { model, temperature = 0.2 } = {}) {
   return text;
 }
 
+/**
+ * Generic OpenAI-compatible provider. Most third-party LLMs (DeepSeek, Kimi,
+ * Grok, Mistral, OpenRouter, …) expose the OpenAI `/chat/completions` API, so a
+ * single generator with a configurable `baseURL` covers all of them. The key
+ * comes from OPENAI_API_KEY; `baseURL` and `model` are required (per-endpoint).
+ */
+async function generateWithOpenAICompatible(prompt, { model, baseURL, temperature } = {}) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY is not set.');
+  if (!baseURL)
+    throw new Error('OPENAI provider requires a `baseURL` in config (the endpoint URL).');
+  if (!model) throw new Error('OPENAI provider requires a `model` in config.');
+  const { default: OpenAI } = await import('openai');
+  const client = new OpenAI({ apiKey, baseURL });
+  const body = { model, messages: [{ role: 'user', content: prompt }] };
+  // Opt-in only: some OpenAI-compatible endpoints (e.g. reasoning models)
+  // reject a non-default temperature, so only send it when explicitly given.
+  if (typeof temperature === 'number') body.temperature = temperature;
+  const resp = await client.chat.completions.create(body);
+  const text = resp.choices?.[0]?.message?.content;
+  if (!text) throw new Error('OpenAI-compatible provider returned no content.');
+  return text;
+}
+
 async function generateWithGemini(prompt, { model, temperature } = {}) {
   const apiKey = (process.env.GEMINI_API_KEY || '').trim();
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set.');
@@ -133,10 +157,12 @@ async function generateWithClaude(prompt, { model, maxTokens = 2000, temperature
 }
 
 /**
- * Dispatch to the given provider ('CHATGPT' | 'GEMINI' | 'CLAUDE'), retrying
- * transient failures.
- * opts: { model, maxTokens, temperature } — maxTokens applies to Claude only —
- * plus retry controls { retries, baseDelayMs, onRetry }.
+ * Dispatch to the given provider ('CHATGPT' | 'GEMINI' | 'CLAUDE' | 'OPENAI'),
+ * retrying transient failures. 'OPENAI' is the generic OpenAI-compatible
+ * provider — pass `baseURL` for the endpoint (DeepSeek, Kimi, Grok, …).
+ * opts: { model, maxTokens, baseURL, temperature } — maxTokens applies to
+ * Claude only, baseURL to OPENAI only — plus retry controls
+ * { retries, baseDelayMs, onRetry }.
  */
 async function generate(provider, prompt, opts = {}) {
   const { retries, baseDelayMs, onRetry, ...providerOpts } = opts;
@@ -144,6 +170,7 @@ async function generate(provider, prompt, opts = {}) {
     if (provider === 'CHATGPT') return generateWithChatGPT(prompt, providerOpts);
     if (provider === 'GEMINI') return generateWithGemini(prompt, providerOpts);
     if (provider === 'CLAUDE') return generateWithClaude(prompt, providerOpts);
+    if (provider === 'OPENAI') return generateWithOpenAICompatible(prompt, providerOpts);
     return Promise.reject(new Error(`Unknown provider: ${provider}`));
   };
   return withRetry(call, { retries, baseDelayMs, onRetry });
@@ -160,6 +187,7 @@ module.exports = {
   generateWithChatGPT,
   generateWithGemini,
   generateWithClaude,
+  generateWithOpenAICompatible,
   resolveModel,
   isRetryable,
   withRetry,

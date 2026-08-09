@@ -28,14 +28,14 @@ One companion, the whole review lifecycle: **review, summarize, explain, documen
 These are **real Aido comments** on demo PRs — click any command to see the full,
 rendered output in GitHub:
 
-| Command | What it does | Live demo |
-|---|---|---|
-| `aido review` | Multi-persona review + digest, inline applyable suggestions | [PR #64](https://github.com/aido-dev/aido/pull/64) |
-| `aido suggest` | Concrete improvements & small refactors | [PR #65](https://github.com/aido-dev/aido/pull/65) |
-| `aido test` | Test plan, coverage gaps, follow-ups | [PR #66](https://github.com/aido-dev/aido/pull/66) |
-| `aido explain` | Developer-focused step-by-step walkthrough | [PR #67](https://github.com/aido-dev/aido/pull/67) |
-| `aido summarize` | High-level summary for stakeholders | [PR #68](https://github.com/aido-dev/aido/pull/68) |
-| `aido docs` | Draft/augment documentation | [PR #69](https://github.com/aido-dev/aido/pull/69) |
+| Command          | What it does                                                | Live demo                                          |
+| ---------------- | ----------------------------------------------------------- | -------------------------------------------------- |
+| `aido review`    | Multi-persona review + digest, inline applyable suggestions | [PR #64](https://github.com/aido-dev/aido/pull/64) |
+| `aido suggest`   | Concrete improvements & small refactors                     | [PR #65](https://github.com/aido-dev/aido/pull/65) |
+| `aido test`      | Test plan, coverage gaps, follow-ups                        | [PR #66](https://github.com/aido-dev/aido/pull/66) |
+| `aido explain`   | Developer-focused step-by-step walkthrough                  | [PR #67](https://github.com/aido-dev/aido/pull/67) |
+| `aido summarize` | High-level summary for stakeholders                         | [PR #68](https://github.com/aido-dev/aido/pull/68) |
+| `aido docs`      | Draft/augment documentation                                 | [PR #69](https://github.com/aido-dev/aido/pull/69) |
 
 <details>
 <summary><b>Sample: <code>aido review</code> catching real bugs</b> (from PR #64)</summary>
@@ -45,12 +45,14 @@ rendered output in GitHub:
 > **Recommendation:** Request changes
 >
 > **Faceted Notes:**
+>
 > - **Security:** Critical SQL injection vulnerability; bare `except` masks errors and potential security issues.
 > - **Correctness:** Mutable default argument leads to unexpected state; missing input validation for order dictionary keys.
 > - **Maintainability:** Use of "magic numbers" reduces readability and makes updates difficult.
 > - **QA/Testing:** Bare `except` swallows all errors, making specific failure modes hard to test.
 
 Code fixes are delivered as **inline "Apply suggestion" buttons** on the diff — not dumped in the comment body.
+
 </details>
 
 <details>
@@ -61,6 +63,7 @@ Code fixes are delivered as **inline "Apply suggestion" buttons** on the diff �
 > **Intent** — Control the rate at which operations run. Uncontrolled access can lead to resource exhaustion, instability, or abuse. The token-bucket allows short bursts (while tokens last) while enforcing a long-term average rate.
 >
 > **Design choices**
+>
 > - **`time.monotonic()` for timestamps** — immune to wall-clock/NTP adjustments that could unfairly reset a limit.
 > - **"Lazy" continuous refill** — tokens are recomputed on each `allow()` call instead of by a background thread, avoiding thread overhead.
 > - **Capacity cap** — `min(capacity, …)` stops tokens accumulating indefinitely.
@@ -68,6 +71,7 @@ Code fixes are delivered as **inline "Apply suggestion" buttons** on the diff �
 > **Risks & edge cases** — not thread-safe (`tokens`/`updated` mutated without a lock); single-process only (no distributed limiting); `refill_per_sec = 0` degrades to a fixed budget.
 
 Aido reads the diff and explains intent, mechanics, design rationale, **and** the risks — so a human understands code they didn't write.
+
 </details>
 
 ---
@@ -99,6 +103,7 @@ That's it — Aido replies right in the PR. [Full install options ↓](#-quick-s
   - `GEMINI_API_KEY` (required for default provider)
   - `CHATGPT_API_KEY` (if using ChatGPT)
   - `CLAUDE_API_KEY` (if using Claude)
+  - `OPENAI_API_KEY` (if using an OpenAI-compatible endpoint — DeepSeek, Kimi, Grok, …)
 - Uses the built-in **`GITHUB_TOKEN`** for posting comments and reviews.
 - ⚠️ **Forked PRs**: repository secrets may be unavailable due to GitHub policy.
 
@@ -186,6 +191,7 @@ For `triage`, pass `issue_number` instead of `pr_number`. See
    - `GEMINI_API_KEY` (default provider)
    - `CHATGPT_API_KEY` (if using ChatGPT)
    - `CLAUDE_API_KEY` (if using Claude)
+   - `OPENAI_API_KEY` (if using an OpenAI-compatible endpoint — DeepSeek, Kimi, Grok, …)
 2. Copy [`examples/remote/aido.yml`](examples/remote/aido.yml) to `.github/workflows/aido.yml` — a single thin workflow that runs Aido from a pinned release tag. Upgrading is a one-line tag bump.
 3. Comment `aido review` on a PR.
 4. (Optional) Customize any command by adding its config file (e.g. `.github/scripts/review/aido-review-config.json`) — overrides the shipped defaults, no scripts needed. See [`examples/remote/`](examples/remote/) for details.
@@ -272,9 +278,26 @@ Each workflow builds a prompt from PR context (title, body, changed files, **tru
   - Script: `.github/scripts/triage/aido-triage.js`
   - Config: `.github/scripts/triage/aido-triage-config.json` _(adds `candidateLabels`, `severityLabels`, and `applyLabels` to optionally auto-apply suggested labels; default `false`)_
 
-> Each config supports: `provider` (CHATGPT|GEMINI|CLAUDE), `model` (a provider-keyed map, e.g. `"model": { "CLAUDE": "claude-opus-5" }`), `language`, `tone`, `style`, `length`, `include` (title/body/filesSummary/diff), `additionalInstructions`, and an optional `promptTemplate` with placeholders.
+> Each config supports: `provider` (CHATGPT|GEMINI|CLAUDE|OPENAI), `model` (a provider-keyed map, e.g. `"model": { "CLAUDE": "claude-opus-5" }`), `baseURL` (for the `OPENAI` provider), `language`, `tone`, `style`, `length`, `include` (title/body/filesSummary/diff), `additionalInstructions`, and an optional `promptTemplate` with placeholders.
 >
 > **Choosing a model:** set `model` per provider. Any current Claude model works — Opus (4.6 / 4.7 / 4.8 / 5), Fable 5, Sonnet 4.6, Haiku 4.5. Aido sends no sampling `temperature` to Claude (recent models manage it internally and reject the parameter), so the latest models work out of the box.
+
+### Bring any model (OpenAI-compatible)
+
+Beyond the three first-class providers (Gemini, ChatGPT, Claude), Aido ships a generic **`OPENAI`** provider for any endpoint that speaks the OpenAI `/chat/completions` API — **DeepSeek, Kimi (Moonshot), Grok (xAI), Mistral, OpenRouter**, and self-hosted gateways. Set `provider: "OPENAI"`, point `baseURL` at the endpoint, and put the key in the **`OPENAI_API_KEY`** secret:
+
+```jsonc
+// e.g. .github/scripts/review/aido-review-config.json — DeepSeek
+{
+  "reviewer": {
+    "provider": "OPENAI",
+    "baseURL": "https://api.deepseek.com",
+    "model": { "OPENAI": "deepseek-chat" },
+  },
+}
+```
+
+One key, one endpoint, any model — nothing else to install. (`temperature` is opt-in here too, so reasoning-style endpoints that reject it still work.)
 
 ---
 

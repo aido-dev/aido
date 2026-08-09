@@ -7,6 +7,7 @@ const {
   generate,
   generateWithGemini,
   generateWithClaude,
+  generateWithOpenAICompatible,
   resolveModel,
   isRetryable,
   withRetry,
@@ -175,6 +176,45 @@ test('generateWithClaude sends temperature only when explicitly given', async ()
         return { content: [{ type: 'text', text: 'ok' }] };
       },
       () => generateWithClaude('p', { model: 'claude-opus-4-6', temperature: 0.2 }),
+    ),
+  );
+});
+
+test('generateWithOpenAICompatible requires OPENAI_API_KEY', async () => {
+  await withEnv({ OPENAI_API_KEY: undefined }, () =>
+    assert.rejects(
+      generateWithOpenAICompatible('p', {
+        model: 'deepseek-chat',
+        baseURL: 'https://api.deepseek.com',
+      }),
+      /OPENAI_API_KEY is not set/,
+    ),
+  );
+});
+
+test('generateWithOpenAICompatible requires a baseURL', async () => {
+  await withEnv({ OPENAI_API_KEY: 'k' }, () =>
+    assert.rejects(
+      generateWithOpenAICompatible('p', { model: 'deepseek-chat' }),
+      /requires a .baseURL. in config/,
+    ),
+  );
+});
+
+test('generateWithOpenAICompatible requires a model', async () => {
+  await withEnv({ OPENAI_API_KEY: 'k' }, () =>
+    assert.rejects(
+      generateWithOpenAICompatible('p', { baseURL: 'https://api.deepseek.com' }),
+      /requires a .model. in config/,
+    ),
+  );
+});
+
+test('generate routes OPENAI to the OpenAI-compatible provider', async () => {
+  await withEnv({ OPENAI_API_KEY: undefined }, () =>
+    assert.rejects(
+      generate('OPENAI', 'p', { model: 'x', baseURL: 'https://api.deepseek.com', baseDelayMs: 0 }),
+      /OPENAI_API_KEY is not set/,
     ),
   );
 });

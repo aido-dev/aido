@@ -190,7 +190,7 @@ async function main() {
 
   let text = '';
   try {
-    text = await generate(provider, prompt, { model, maxTokens: 2000 });
+    text = await generate(provider, prompt, { model, baseURL: config.baseURL, maxTokens: 2000 });
   } catch (e) {
     await postComment(
       owner,

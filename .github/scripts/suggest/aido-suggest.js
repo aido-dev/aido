@@ -202,7 +202,7 @@ function buildPerFilePrompt(config, globalCtx, file) {
 }
 
 // Reformat Pass
-async function reformatToContract(provider, model, rawText) {
+async function reformatToContract(provider, model, baseURL, rawText) {
   const reformatPrompt = [
     'Reformat the following content into the exact output contract below. Return only the suggestions; no commentary.',
     OUTPUT_CONTRACT,
@@ -211,7 +211,7 @@ async function reformatToContract(provider, model, rawText) {
     '--- END CONTENT TO REFORMAT ---',
   ].join('\n\n');
 
-  return generate(provider, reformatPrompt, { model });
+  return generate(provider, reformatPrompt, { model, baseURL });
 }
 
 // Main
@@ -225,6 +225,7 @@ async function main() {
   const config = loadConfig(CONFIG_PATH, DEFAULT_CONFIG, ['model', 'include'], 'Aido Suggest');
   const provider = (config.provider || 'GEMINI').toUpperCase();
   const model = resolveModel(config, provider);
+  const baseURL = config.baseURL;
 
   // Build global context
   const pr = await getPr(owner, repo, prNumber);
@@ -243,11 +244,11 @@ async function main() {
     // Call selected provider
     let text = '';
     try {
-      text = await generate(provider, filePrompt, { model });
+      text = await generate(provider, filePrompt, { model, baseURL });
 
       // Reformat once if not compliant
       if (text && !isContractCompliant(text)) {
-        const reformatted = await reformatToContract(provider, model, text);
+        const reformatted = await reformatToContract(provider, model, baseURL, text);
         if (isContractCompliant(reformatted)) text = reformatted;
       }
 
