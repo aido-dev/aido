@@ -13,9 +13,13 @@
 ![Supports ChatGPT](https://img.shields.io/badge/provider-ChatGPT-10a37f?logo=openai&style=flat-square)
 ![Supports Claude](https://img.shields.io/badge/provider-Claude-8a2be2?style=flat-square)
 
+[![Mistral](https://img.shields.io/badge/Mistral-FA520F?logo=mistralai&logoColor=white&style=flat-square)](#bring-any-model-openai-compatible)
+[![DeepSeek](https://img.shields.io/badge/DeepSeek-4D6BFE?logo=deepseek&logoColor=white&style=flat-square)](#bring-any-model-openai-compatible)
+[![+ any OpenAI-compatible](https://img.shields.io/badge/%2B_any_OpenAI--compatible-Kimi_%C2%B7_Grok_%C2%B7_OpenRouter-555?style=flat-square)](#bring-any-model-openai-compatible)
+
 AI agents — Copilot, Claude Code, Cursor — are opening more and more pull requests, and a human still has to understand code they didn't write. Aido keeps that human in the loop: when an **AI-authored PR** lands, it can **automatically explain, summarize, review, and document** the change. And you can run those same commands on **any PR or issue on demand** — just comment `aido <command>`.
 
-One companion, the whole review lifecycle: **review, summarize, explain, document, test, and triage** — with **Gemini, ChatGPT, or Claude**, right inside GitHub Actions. Install with a single workflow file.
+One companion, the whole review lifecycle: **review, summarize, explain, document, test, and triage** — with **Gemini, ChatGPT, Claude, or any OpenAI-compatible model** (Mistral, DeepSeek, …), right inside GitHub Actions. Install with a single workflow file.
 
 <p align="center">
   <img src="docs/media/aido-demo.gif" alt="Aido reviewing a pull request, live in GitHub" width="820">
@@ -91,7 +95,7 @@ That's it — Aido replies right in the PR. [Full install options ↓](#-quick-s
 - 🤖 **Auto-companion for AI-authored PRs** — when Copilot / Claude Code / Cursor open a PR, Aido runs automatically (explain + summarize by default; review/docs/test opt-in)
 - ⚡ **On-demand on any PR or issue** — `aido review`, `summarize`, `explain`, `docs`, `suggest`, `test`, `triage`
 - 🧩 Consolidated, persona-guided reviewer with **applyable inline suggestions** (robust validation, zero false positives)
-- 🔌 **Multi-provider, bring-your-own-key:** Gemini (default), ChatGPT, Claude — no third-party data processor
+- 🔌 **Multi-provider, bring-your-own-key:** Gemini (default), ChatGPT, Claude, or **any OpenAI-compatible endpoint** (Mistral, DeepSeek, Kimi, Grok, …) — no third-party data processor
 - 📦 **One-file install** from a pinned release tag; upgrading is a one-line bump
 - 🔧 Fully configurable prompts, personas, tones, and per-command models
 
