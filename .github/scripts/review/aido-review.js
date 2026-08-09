@@ -70,6 +70,56 @@ function displayLabel(p) {
   return 'AI reviewer';
 }
 
+/**
+ * Persona guidance: each persona's real instruction text (its `description`, or
+ * `prompt` with `{{template}}` scaffolding stripped), not just its display name.
+ * Consumers put house rules in that text and expect them to be honored.
+ */
+function personaGuidanceBlock(personas) {
+  return (personas || [])
+    .map((p) => {
+      const label = displayLabel(p);
+      const raw = (p?.description || p?.prompt || '').trim();
+      const body = raw
+        .replace(/\{\{[^}]*\}\}/g, '') // drop {{diff}}, {{issueTitle}}, … placeholders
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+      return body ? `- ${label}:\n${body}` : `- ${label}`;
+    })
+    .join('\n\n');
+}
+
+/**
+ * Shared reviewer context injected into BOTH the consolidated review and the
+ * inline-suggestions pass, so suggestions honor the same personas/constraints
+ * as the summary (they previously ran context-free and contradicted it).
+ */
+function reviewerContextBlock(personas, context) {
+  const guidance = personaGuidanceBlock(personas);
+  const parts = [
+    'PROJECT CONTEXT / CONSTRAINTS (house rules — honor these; they override generic best-practice advice):',
+    guidance || '(no reviewer personas configured)',
+    '',
+    `PR Title: ${context.prTitle || ''}`,
+    `PR Description: ${context.prBody || 'No description'}`,
+  ];
+  if (context.issueTitle) {
+    parts.push(`Linked Issue: ${context.issueTitle}\n${context.issueBody || ''}`);
+  }
+  return parts.join('\n');
+}
+
+/** Whether to run the separate inline-suggestions pass (reviewer.suggestions !== false). */
+function suggestionsEnabled(reviewerCfg) {
+  return reviewerCfg?.suggestions !== false;
+}
+
+/** Cap the suggestion list to reviewer.maxSuggestions (when a valid, non-negative number). */
+function capSuggestions(list, reviewerCfg) {
+  const max = Number(reviewerCfg?.maxSuggestions);
+  return Number.isFinite(max) && max >= 0 ? list.slice(0, max) : list;
+}
+
 async function getPrContext(owner, repo, prNumber) {
   const pr = await getPr(owner, repo, prNumber);
   const { issueTitle, issueBody } = await getLinkedIssue(owner, repo, pr.body);
@@ -116,10 +166,14 @@ function makeConsolidatedPrompt(personas, context) {
     { name: 'Style', cue: 'clarity, consistency, dead code, docs' },
   ];
   const personasList = personas.map((p) => displayLabel(p)).join(', ');
+  const guidance = personaGuidanceBlock(personas);
   return `
 ROLE:
 You are a world-class code review agent acting as multiple specialists: ${personasList}.
 Operate within GitHub PR constraints. Be precise, constructive, and strictly follow these rules.
+
+REVIEWER GUIDANCE (house rules from the configured personas — honor these; they override generic best practices):
+${guidance || '(none)'}
 
 CONTEXT:
 PR Title: ${context.prTitle}
@@ -170,6 +224,44 @@ OUTPUT (STRICT):
 3) Faceted notes (${facets.map((f) => f.name).join(', ')}) as terse bullets (no code)
 4) Code Suggestions only (use the exact format above; no extra prose outside suggestions)
 `;
+}
+
+/**
+ * Inline-suggestions pass prompt. Prepends the shared reviewer context so the
+ * suggestions honor the same personas/house-rules as the consolidated review.
+ */
+function makeSuggestionsPrompt(personas, context, files) {
+  const changedList = files.map((f) => `- ${f.filename}`).join('\n');
+  return `
+${reviewerContextBlock(personas, context)}
+
+You are a code review assistant. Honor the PROJECT CONTEXT / CONSTRAINTS above — never
+propose a change that contradicts those house rules. Output code suggestions in this EXACT format:
+
+File: exact/path/to/file.ext
+Line: X  (or Lines: X-Y for multi-line)
+Issue: brief description
+Priority: Urgent|High|Medium|Low
+Suggestion:
+\`\`\`suggestion
+<exact replacement code>
+\`\`\`
+
+CRITICAL: Line numbers MUST correspond to the NEW file (after changes).
+Look at hunk headers like "@@ -10,5 +12,8 @@" - the +12,8 means new file starts at line 12.
+Count lines that start with '+' or ' ' (space), NOT lines that start with '-'.
+
+Changed files in this PR:
+${changedList}
+
+PR Diff:
+\`\`\`diff
+${context.diff}
+\`\`\`
+
+Output ONLY valid suggestions. Skip if you cannot find the exact line, or if a suggestion
+would violate the project constraints above.
+`.trim();
 }
 
 /**
@@ -686,49 +778,24 @@ async function main() {
 
   console.log('Consolidated review completed');
 
-  // Suggestions-only pass
-  const changedList = files.map((f) => `- ${f.filename}`).join('\n');
-  const suggestionsOnlyPrompt = `
-You are a code review assistant. Output code suggestions in this EXACT format:
-
-File: exact/path/to/file.ext
-Line: X  (or Lines: X-Y for multi-line)
-Issue: brief description
-Priority: Urgent|High|Medium|Low
-Suggestion:
-\`\`\`suggestion
-<exact replacement code>
-\`\`\`
-
-CRITICAL: Line numbers MUST correspond to the NEW file (after changes).
-Look at hunk headers like "@@ -10,5 +12,8 @@" - the +12,8 means new file starts at line 12.
-Count lines that start with '+' or ' ' (space), NOT lines that start with '-'.
-
-Changed files in this PR:
-${changedList}
-
-PR Diff:
-\`\`\`diff
-${context.diff}
-\`\`\`
-
-Output ONLY valid suggestions. Skip if you cannot find the exact line.
-`.trim();
-
-  // The consolidated review body already succeeded above. Treat the separate
-  // suggestions pass as best-effort: if it fails (e.g. a transient provider
-  // error that outlasts retries), still post the review body rather than
-  // discarding the whole review.
+  // Suggestions-only pass (best-effort; skippable via reviewer.suggestions=false).
+  // It now receives the shared reviewer context so it honors the same personas
+  // and house rules as the consolidated review above.
   let suggestionsOnlyText = '';
   let suggestionsError = null;
-  try {
-    suggestionsOnlyText = await callProvider(suggestionsOnlyPrompt);
-    console.log('Suggestions extraction completed');
-  } catch (e) {
-    suggestionsError = e;
-    console.error(
-      `Suggestions pass failed; posting review body without inline suggestions: ${e?.message || e}`,
-    );
+  if (suggestionsEnabled(reviewerCfg)) {
+    const suggestionsOnlyPrompt = makeSuggestionsPrompt(personas, context, files);
+    try {
+      suggestionsOnlyText = await callProvider(suggestionsOnlyPrompt);
+      console.log('Suggestions extraction completed');
+    } catch (e) {
+      suggestionsError = e;
+      console.error(
+        `Suggestions pass failed; posting review body without inline suggestions: ${e?.message || e}`,
+      );
+    }
+  } else {
+    console.log('Inline suggestions disabled via reviewer.suggestions=false');
   }
 
   let suggestions = parseSuggestions(suggestionsOnlyText, files);
@@ -755,8 +822,16 @@ Output ONLY valid suggestions. Skip if you cannot find the exact line.
 
   console.log(`Validated ${validated.length} of ${suggestions.length} suggestions`);
 
+  // Cap to reviewer.maxSuggestions (if configured), then build the review comments.
+  const finalSuggestions = capSuggestions(validated, reviewerCfg);
+  if (finalSuggestions.length !== validated.length) {
+    console.log(
+      `Capped suggestions to ${finalSuggestions.length} of ${validated.length} (maxSuggestions)`,
+    );
+  }
+
   // Create GitHub review comments using line+side API
-  const comments = validated.map((s) => {
+  const comments = finalSuggestions.map((s) => {
     const em =
       s.priority === 'URGENT'
         ? '🔴'
@@ -858,4 +933,14 @@ if (require.main === module) {
   });
 }
 
-module.exports = { buildLineMap, validateSuggestion, parseSuggestions };
+module.exports = {
+  buildLineMap,
+  validateSuggestion,
+  parseSuggestions,
+  personaGuidanceBlock,
+  reviewerContextBlock,
+  makeConsolidatedPrompt,
+  makeSuggestionsPrompt,
+  suggestionsEnabled,
+  capSuggestions,
+};

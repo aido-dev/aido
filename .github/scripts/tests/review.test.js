@@ -4,7 +4,16 @@ const assert = require('node:assert/strict');
 // aido-review.js requires lib/github at load, which needs a token for Octokit.
 process.env.GITHUB_TOKEN = process.env.GITHUB_TOKEN || 'test-token';
 
-const { buildLineMap, validateSuggestion, parseSuggestions } = require('../review/aido-review');
+const {
+  buildLineMap,
+  validateSuggestion,
+  parseSuggestions,
+  personaGuidanceBlock,
+  makeConsolidatedPrompt,
+  makeSuggestionsPrompt,
+  suggestionsEnabled,
+  capSuggestions,
+} = require('../review/aido-review');
 
 // --- buildLineMap ---
 
@@ -258,4 +267,58 @@ test('parseSuggestions handles bold-markdown field labels', () => {
 test('parseSuggestions returns empty for empty input', () => {
   assert.deepEqual(parseSuggestions('', FILES), []);
   assert.deepEqual(parseSuggestions(null, FILES), []);
+});
+
+// --- v1.5.1: reviewer context reaches the inline-suggestions pass + controls ---
+
+const CONSTRAINT =
+  'This repo uses neon-http; never suggest wrapping single statements in db.transaction().';
+const ctxPersonas = [
+  {
+    name: 'DB reviewer',
+    prompt: `You review database code. ${CONSTRAINT} Issue: {{issueTitle}} Diff: {{diff}}`,
+  },
+];
+const ctx = {
+  prTitle: 'Add update',
+  prBody: 'small change',
+  issueTitle: '',
+  issueBody: '',
+  diff: 'd',
+};
+const ctxFiles = [{ filename: 'db/users.ts' }];
+
+test('personaGuidanceBlock includes persona body and strips {{template}} placeholders', () => {
+  const g = personaGuidanceBlock(ctxPersonas);
+  assert.match(g, /DB reviewer/);
+  assert.match(g, /neon-http/);
+  assert.doesNotMatch(g, /\{\{/);
+});
+
+test('makeSuggestionsPrompt injects the house rules into the suggestions pass', () => {
+  const prompt = makeSuggestionsPrompt(ctxPersonas, ctx, ctxFiles);
+  assert.match(prompt, /PROJECT CONTEXT \/ CONSTRAINTS/);
+  assert.match(prompt, /neon-http/); // the constraint now reaches the suggestions pass
+  assert.match(prompt, /db\/users\.ts/); // changed files still listed
+  assert.match(prompt, /```suggestion/); // still the exact suggestion format
+});
+
+test('makeConsolidatedPrompt now embeds persona guidance bodies, not just names', () => {
+  const prompt = makeConsolidatedPrompt(ctxPersonas, ctx);
+  assert.match(prompt, /REVIEWER GUIDANCE/);
+  assert.match(prompt, /neon-http/);
+});
+
+test('suggestionsEnabled: default on, off when reviewer.suggestions === false', () => {
+  assert.equal(suggestionsEnabled({}), true);
+  assert.equal(suggestionsEnabled({ suggestions: true }), true);
+  assert.equal(suggestionsEnabled({ suggestions: false }), false);
+});
+
+test('capSuggestions: caps to maxSuggestions, ignores invalid, no cap when unset', () => {
+  const list = [1, 2, 3, 4, 5];
+  assert.deepEqual(capSuggestions(list, {}), list);
+  assert.deepEqual(capSuggestions(list, { maxSuggestions: 2 }), [1, 2]);
+  assert.deepEqual(capSuggestions(list, { maxSuggestions: 0 }), []);
+  assert.deepEqual(capSuggestions(list, { maxSuggestions: 'x' }), list);
 });

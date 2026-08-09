@@ -5,6 +5,12 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.5.1] - 2026-08-09
+
+### 🐛 Bug Fixes
+
+- **review:** The inline-suggestions pass now receives the **same reviewer personas and project context** as the faceted review. Previously it ran as a separate, context-free LLM call, so it could emit confident, plausible-but-wrong inline suggestions that contradicted the repo's stated house rules — and even the same review's own summary (e.g. suggesting `db.transaction(...)` around single statements on a `neon-http` driver that has no interactive transactions). Persona `prompt`/`description` text is now injected into **both** passes (not just persona names), so suggestions honor your constraints. Adds two `reviewer` controls: **`suggestions: false`** (skip the inline pass entirely; keep the faceted body) and **`maxSuggestions: N`** (cap inline suggestions). Backward compatible — absent the new keys, behavior is unchanged except suggestions now get context.
+
 ## [v1.5.0] - 2026-08-09
 
 ### ✨ New Features
