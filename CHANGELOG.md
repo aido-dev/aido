@@ -5,6 +5,12 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.5.2] - 2026-08-10
+
+### 🐛 Bug Fixes
+
+- **workflows:** Run Aido on **Node 22** (was Node 20). `openai@latest` (7.x) declares `engines.node >= 22`, so installs on Node 20 printed an `EBADENGINE` warning and risked runtime breakage. Bumped `node-version` to `22` across all command workflows, the composite action's default, and the examples. Node 22 is Active LTS and `actions/setup-node` installs it on any runner.
+
 ## [v1.5.1] - 2026-08-09
 
 ### 🐛 Bug Fixes

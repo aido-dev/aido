@@ -37,7 +37,7 @@ inputs:
   node-version:
     description: 'Node.js version to run Aido with'
     required: false
-    default: '20'
+    default: '22'
 
 runs:
   using: 'composite'

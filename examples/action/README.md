@@ -21,7 +21,7 @@ entry point.
 | `command`      | yes               | `review` \| `summarize` \| `explain` \| `docs` \| `suggest` \| `test` \| `triage` |
 | `pr_number`    | for PR commands   | The pull request to act on                                                        |
 | `issue_number` | for `triage`      | The issue to act on                                                               |
-| `node-version` | no (default `20`) | Node.js version                                                                   |
+| `node-version` | no (default `22`) | Node.js version                                                                   |
 
 ## Secrets (via `env`)
 
