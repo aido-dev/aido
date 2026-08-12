@@ -7,6 +7,7 @@ const {
   windowLabel,
   buildDigestPrompt,
   shouldPost,
+  resolveDestination,
   DEFAULT_CONFIG,
 } = require('../digest/aido-digest');
 
@@ -84,4 +85,12 @@ test('buildDigestPrompt caps the listed PRs at maxPrs and notes the overflow', (
   assert.match(prompt, /and 3 more merged PR\(s\)/);
   // stats still reflect ALL PRs, not just the listed ones
   assert.match(prompt, /Merged PRs: 5/);
+});
+
+test('resolveDestination: issue by default, discussion when set', () => {
+  assert.equal(resolveDestination({}), 'issue');
+  assert.equal(resolveDestination({ destination: 'issue' }), 'issue');
+  assert.equal(resolveDestination({ destination: 'discussion' }), 'discussion');
+  assert.equal(resolveDestination({ destination: 'DISCUSSION' }), 'discussion');
+  assert.equal(resolveDestination({ destination: 'bogus' }), 'issue');
 });

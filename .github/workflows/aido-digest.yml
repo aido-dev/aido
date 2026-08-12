@@ -41,6 +41,7 @@ on:
 permissions:
   contents: read
   issues: write
+  discussions: write
   pull-requests: read
 
 jobs:

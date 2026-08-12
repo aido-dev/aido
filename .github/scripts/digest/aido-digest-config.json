@@ -1,9 +1,13 @@
 {
   "provider": "GEMINI",
-  "model": { "GEMINI": "gemini-2.5-flash" },
+  "model": {
+    "GEMINI": "gemini-2.5-flash"
+  },
   "lookbackDays": 7,
   "maxPrs": 40,
   "label": "digest",
+  "destination": "issue",
+  "discussionCategory": "Announcements",
   "title": "What shipped",
   "language": "English",
   "tone": "neutral, professional",

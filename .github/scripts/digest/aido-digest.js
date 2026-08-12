@@ -31,6 +31,8 @@ const DEFAULT_CONFIG = {
   lookbackDays: 7, // window of merged PRs to summarize
   maxPrs: 40, // cap the number of PRs listed in the prompt (stats still count all)
   label: 'digest', // label applied to the digest issue (created if missing)
+  destination: 'issue', // 'issue' | 'discussion'
+  discussionCategory: 'Announcements', // category name (used when destination is 'discussion')
   title: 'What shipped', // issue title becomes "📦 <title> — <window>"
   language: 'English',
   tone: 'neutral, professional',
@@ -123,6 +125,58 @@ function shouldPost(prs, config) {
   return config?.skipEmpty === false;
 }
 
+/** Digest destination: 'issue' (default) or 'discussion'. */
+function resolveDestination(config) {
+  return String(config?.destination || 'issue').toLowerCase() === 'discussion'
+    ? 'discussion'
+    : 'issue';
+}
+
+/**
+ * Post the digest as a GitHub Discussion. Requires Discussions enabled on the
+ * repo, a category to post under, and `discussions: write` permission. Uses the
+ * GraphQL API (Discussions have no REST create). Falls back to the first
+ * category if the configured name isn't found.
+ */
+async function postDiscussion(owner, repo, title, body, categoryName) {
+  const info = await octokit.graphql(
+    `query ($owner: String!, $repo: String!) {
+      repository(owner: $owner, name: $repo) {
+        id
+        discussionCategories(first: 50) { nodes { id name } }
+      }
+    }`,
+    { owner, repo },
+  );
+  const repoId = info?.repository?.id;
+  const cats = info?.repository?.discussionCategories?.nodes || [];
+  if (!repoId || cats.length === 0) {
+    throw new Error(
+      'Discussions are not enabled on this repository (or have no categories). ' +
+        'Enable Discussions and add a category, or set `destination` to "issue".',
+    );
+  }
+  const wanted = String(categoryName || '').toLowerCase();
+  let cat = cats.find((c) => c.name.toLowerCase() === wanted);
+  if (!cat) {
+    cat = cats[0];
+    if (categoryName) {
+      console.warn(
+        `[Aido Digest] Discussion category '${categoryName}' not found; using '${cat.name}'.`,
+      );
+    }
+  }
+  const res = await octokit.graphql(
+    `mutation ($repoId: ID!, $catId: ID!, $title: String!, $body: String!) {
+      createDiscussion(input: { repositoryId: $repoId, categoryId: $catId, title: $title, body: $body }) {
+        discussion { url }
+      }
+    }`,
+    { repoId, catId: cat.id, title, body },
+  );
+  return res?.createDiscussion?.discussion?.url;
+}
+
 /** Ensure the digest label exists (idempotent — ignores "already exists"). */
 async function ensureLabel(owner, repo, name) {
   if (!name) return;
@@ -192,15 +246,20 @@ async function main() {
   const body = `${digest.trim()}\n\n---\n${statsLine}${modelFooter(model)}`;
   const title = `📦 ${config.title || 'What shipped'} — ${label}`;
 
-  await ensureLabel(owner, repo, config.label);
-  const { data: issue } = await octokit.issues.create({
-    owner,
-    repo,
-    title,
-    body,
-    labels: config.label ? [config.label] : [],
-  });
-  console.log(`[Aido Digest] Posted: ${issue.html_url}`);
+  if (resolveDestination(config) === 'discussion') {
+    const url = await postDiscussion(owner, repo, title, body, config.discussionCategory);
+    console.log(`[Aido Digest] Posted discussion: ${url}`);
+  } else {
+    await ensureLabel(owner, repo, config.label);
+    const { data: issue } = await octokit.issues.create({
+      owner,
+      repo,
+      title,
+      body,
+      labels: config.label ? [config.label] : [],
+    });
+    console.log(`[Aido Digest] Posted issue: ${issue.html_url}`);
+  }
 }
 
 if (require.main === module) {
@@ -217,5 +276,6 @@ module.exports = {
   windowLabel,
   buildDigestPrompt,
   shouldPost,
+  resolveDestination,
   fetchMergedPrs,
 };

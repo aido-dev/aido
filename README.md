@@ -175,13 +175,14 @@ digest code they didn't write.
 ## 🗓️ Weekly "what shipped" digest
 
 On a schedule, Aido summarizes the PRs **merged in the last window** (default 7
-days) into a skimmable digest and posts it as a new **GitHub Issue** —
+days) into a skimmable digest and posts it as a new **GitHub Issue** (or **Discussion**) —
 _"📦 What shipped — Aug 2 – Aug 9, 2026"_. The digest groups the notable changes
 and includes a line on how many of them were **opened by AI agents**.
 
 - Add `.github/workflows/aido-digest.yml` (copy-based) or `examples/remote/aido-digest.yml` (remote install).
 - Configure the window, model, label, and cadence in `.github/scripts/digest/aido-digest-config.json`.
-- **Only posts when there's something to report** — a quiet window (no merged PRs) produces no issue (`skipEmpty`, default `true`; set to `false` for a weekly heartbeat).
+- **Only posts when there's something to report** — a quiet window (no merged PRs) produces nothing (`skipEmpty`, default `true`; set to `false` for a weekly heartbeat).
+- **Post to an Issue or a Discussion** — set `destination` to `"issue"` (default) or `"discussion"` (with `discussionCategory`; needs Discussions enabled + `discussions: write`).
 - Runs on a weekly **cron** plus **manual dispatch** — edit the `cron` in the workflow to change cadence (keep `lookbackDays` in sync).
 - Needs `issues: write` (to open the digest issue) and `pull-requests: read`.
 
