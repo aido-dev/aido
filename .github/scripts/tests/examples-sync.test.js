@@ -34,10 +34,12 @@ const SYNCED_PAIRS = [
     'examples/.github/auto/scripts/aido-auto-config.json',
   ],
   ['.github/scripts/digest/aido-digest.js', 'examples/.github/digest/scripts/aido-digest.js'],
-  [
-    '.github/scripts/digest/aido-digest-config.json',
-    'examples/.github/digest/scripts/aido-digest-config.json',
-  ],
+  // NOTE: aido-digest-config.json is intentionally NOT synced. Unlike scripts and
+  // workflows (where drift can hide a fixed vulnerability), the digest config holds
+  // per-repo operational choices. This repo's own config posts to a Discussion
+  // (`destination: "discussion"`), while the shipped example keeps the universally
+  // safe default (`"issue"`) — Discussions aren't enabled on most repos, and that
+  // path hard-fails without them. See the digest section of the README.
   ['.github/workflows/aido-digest.yml', 'examples/.github/digest/workflows/aido-digest.yml'],
   [
     '.github/workflows/aido-summarize.yml',
