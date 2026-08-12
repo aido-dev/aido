@@ -10,6 +10,7 @@ const DEFAULTS = {
   provider: 'GEMINI',
   model: { CHATGPT: 'gpt-default', GEMINI: 'gemini-default' },
   include: { title: true, diff: true },
+  aiAuthors: ['copilot', 'claude[bot]'],
   tone: 'neutral',
 };
 
@@ -67,4 +68,19 @@ test('loadConfig ignores deepKeys that are not objects in defaults', () => {
   const file = tmpConfig(JSON.stringify({ tone: 'x' }));
   const cfg = loadConfig(file, DEFAULTS, ['tone']);
   assert.equal(cfg.tone, 'x');
+});
+
+test('loadConfig replaces array-valued deepKeys instead of object-merging them', () => {
+  // Regression: object-spreading arrays turned ['a','b'] into {0:'a',1:'b'},
+  // which broke array consumers (digest aiAuthors → `.some is not a function`).
+  const file = tmpConfig(JSON.stringify({ aiAuthors: ['devin[bot]', 'cursor[bot]'] }));
+  const cfg = loadConfig(file, DEFAULTS, ['model', 'aiAuthors']);
+  assert.ok(Array.isArray(cfg.aiAuthors), 'aiAuthors must stay an array');
+  assert.deepEqual(cfg.aiAuthors, ['devin[bot]', 'cursor[bot]']);
+});
+
+test('loadConfig keeps default array when config omits the key', () => {
+  const file = tmpConfig(JSON.stringify({ tone: 'x' }));
+  const cfg = loadConfig(file, DEFAULTS, ['model', 'aiAuthors']);
+  assert.deepEqual(cfg.aiAuthors, DEFAULTS.aiAuthors);
 });

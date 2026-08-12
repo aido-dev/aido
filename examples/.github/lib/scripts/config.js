@@ -10,7 +10,7 @@ const fs = require('fs');
  *
  * @param {string} configPath absolute path to the JSON config
  * @param {object} defaults default configuration
- * @param {string[]} deepKeys one-level nested objects to merge key-wise (e.g. 'model', 'include')
+ * @param {string[]} deepKeys one-level nested object maps to merge key-wise (e.g. 'model', 'include'). Array-valued keys are replaced wholesale, not merged.
  * @param {string} logPrefix label used in error logs
  */
 function loadConfig(configPath, defaults, deepKeys = ['model', 'include'], logPrefix = 'Aido') {
@@ -19,7 +19,15 @@ function loadConfig(configPath, defaults, deepKeys = ['model', 'include'], logPr
       const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
       const merged = { ...defaults, ...parsed };
       for (const key of deepKeys) {
-        if (defaults[key] && typeof defaults[key] === 'object') {
+        // Only deep-merge plain object maps (e.g. `model`). Arrays are replaced
+        // wholesale by the shallow spread above — merging them via object spread
+        // would turn ['a','b'] into {0:'a',1:'b'} and break array consumers.
+        if (
+          defaults[key] &&
+          typeof defaults[key] === 'object' &&
+          !Array.isArray(defaults[key]) &&
+          !Array.isArray(parsed[key])
+        ) {
           merged[key] = { ...defaults[key], ...(parsed[key] || {}) };
         }
       }
