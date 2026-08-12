@@ -211,7 +211,9 @@ async function fetchMergedPrs(owner, repo, sinceISO) {
 
 async function main() {
   const { owner, repo } = getRepo();
-  const config = loadConfig(CONFIG_PATH, DEFAULT_CONFIG, ['model', 'aiAuthors'], 'Aido Digest');
+  // Only `model` deep-merges (a provider-keyed object map). `aiAuthors` is an
+  // array — it replaces the default wholesale, so it must NOT be a deepKey.
+  const config = loadConfig(CONFIG_PATH, DEFAULT_CONFIG, ['model'], 'Aido Digest');
   const provider = (config.provider || 'GEMINI').toUpperCase();
   const model = resolveModel(config, provider);
   const lookbackDays = Number(config.lookbackDays) > 0 ? Number(config.lookbackDays) : 7;

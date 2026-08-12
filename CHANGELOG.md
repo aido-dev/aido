@@ -5,6 +5,13 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.6.1] - 2026-08-12
+
+### 🐛 Bug Fixes
+
+- **digest:** Fix a crash on every run (`TypeError: (patterns || []).some is not a function`). The digest listed `aiAuthors` as a deep-merge key, but `loadConfig` deep-merges via object spread — which turns an array into an index-keyed object (`['a'] → {0:'a'}`), so the AI-author list was no longer an array. `aiAuthors` now replaces wholesale (it's an array, not an object map).
+- **config:** Harden `loadConfig` so array-valued keys are never object-merged, even if passed in `deepKeys`. `typeof [] === 'object'` had let arrays fall into the object-spread path; they're now replaced wholesale like any other non-map value. Prevents this class of bug for every command.
+
 ## [v1.6.0] - 2026-08-12
 
 ### ✨ New Features
