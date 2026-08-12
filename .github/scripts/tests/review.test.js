@@ -13,6 +13,7 @@ const {
   makeSuggestionsPrompt,
   suggestionsEnabled,
   capSuggestions,
+  reviewEventFromBody,
 } = require('../review/aido-review');
 
 // --- buildLineMap ---
@@ -337,4 +338,25 @@ test('capSuggestions: caps to maxSuggestions, ignores invalid, no cap when unset
   assert.deepEqual(capSuggestions(list, { maxSuggestions: 2 }), [1, 2]);
   assert.deepEqual(capSuggestions(list, { maxSuggestions: 0 }), []);
   assert.deepEqual(capSuggestions(list, { maxSuggestions: 'x' }), list);
+});
+
+// --- reviewEventFromBody ---
+
+test('reviewEventFromBody: plain Approve maps to APPROVE (even with inline nits)', () => {
+  assert.equal(reviewEventFromBody('**Recommendation:** Approve\n\nSome notes.'), 'APPROVE');
+  assert.equal(reviewEventFromBody('Recommendation: Approve'), 'APPROVE');
+});
+
+test('reviewEventFromBody: Approve with minor changes maps to COMMENT', () => {
+  assert.equal(reviewEventFromBody('**Recommendation:** Approve with minor changes'), 'COMMENT');
+});
+
+test('reviewEventFromBody: Request changes maps to REQUEST_CHANGES', () => {
+  assert.equal(reviewEventFromBody('**Recommendation:** Request changes'), 'REQUEST_CHANGES');
+});
+
+test('reviewEventFromBody: unrecognized/missing recommendation falls back to COMMENT', () => {
+  assert.equal(reviewEventFromBody('No recommendation line here.'), 'COMMENT');
+  assert.equal(reviewEventFromBody(''), 'COMMENT');
+  assert.equal(reviewEventFromBody(null), 'COMMENT');
 });

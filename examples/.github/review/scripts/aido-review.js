@@ -890,7 +890,10 @@ async function main() {
       ' re-run `aido review` to retry suggestions.';
   }
 
-  const reviewEvent = comments.length > 0 ? 'REQUEST_CHANGES' : 'COMMENT';
+  // The review's own recommendation drives the GitHub event — a review can
+  // carry minor inline nits and still be an Approve. (Mapping by comment count
+  // made every review with a single suggestion block the PR.)
+  const reviewEvent = reviewEventFromBody(consolidatedBody);
 
   console.log(`\nPosting review with ${comments.length} inline comments (event: ${reviewEvent})`);
 
@@ -908,6 +911,12 @@ async function main() {
     );
   });
 
+  const reviewBody =
+    (consolidatedBody || '🤖 Consolidated AI review attached with inline suggestions.') +
+    '\n\n---\n_Response generated using ' +
+    model +
+    '_';
+
   try {
     await octokit.pulls.createReview({
       owner,
@@ -915,11 +924,7 @@ async function main() {
       pull_number: prNumber,
       event: reviewEvent,
       commit_id: context.headSha,
-      body:
-        (consolidatedBody || '🤖 Consolidated AI review attached with inline suggestions.') +
-        '\n\n---\n_Response generated using ' +
-        model +
-        '_',
+      body: reviewBody,
       comments,
     });
 
@@ -929,8 +934,41 @@ async function main() {
     if (error.response) {
       console.error('GitHub API response:', JSON.stringify(error.response.data, null, 2));
     }
+    // A formal event can be rejected (e.g. GitHub forbids APPROVE/REQUEST_CHANGES
+    // on your own PR — 422). Don't lose the review: retry once as a plain COMMENT.
+    if (reviewEvent !== 'COMMENT') {
+      console.warn(`Retrying review as COMMENT (was ${reviewEvent})…`);
+      await octokit.pulls.createReview({
+        owner,
+        repo,
+        pull_number: prNumber,
+        event: 'COMMENT',
+        commit_id: context.headSha,
+        body: reviewBody,
+        comments,
+      });
+      console.log('\n✅ Review posted successfully (as COMMENT)');
+      return;
+    }
     throw error;
   }
+}
+
+/**
+ * Map the review's stated recommendation to a GitHub review event. The
+ * recommendation parsed from the review body is authoritative — NOT the mere
+ * presence of inline comments. A plain "Approve" approves even when the review
+ * carries minor inline nits; "Approve with minor changes" posts a non-blocking
+ * COMMENT; only an explicit "Request changes" blocks the PR. Anything we can't
+ * parse falls back to COMMENT so the bot never blocks a PR spuriously.
+ */
+function reviewEventFromBody(body) {
+  const m = /Recommendation:?\**\s*([^\n]+)/i.exec(body || '');
+  const rec = (m ? m[1] : '').toLowerCase();
+  if (/request\s+changes?/.test(rec)) return 'REQUEST_CHANGES';
+  // "Approve" alone → APPROVE; "Approve with minor changes" (or nits) → COMMENT.
+  if (/\bapprove\b/.test(rec) && !/\b(minor|nit|with)\b/.test(rec)) return 'APPROVE';
+  return 'COMMENT';
 }
 
 if (require.main === module) {
@@ -950,4 +988,5 @@ module.exports = {
   makeSuggestionsPrompt,
   suggestionsEnabled,
   capSuggestions,
+  reviewEventFromBody,
 };

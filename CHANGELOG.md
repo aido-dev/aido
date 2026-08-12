@@ -14,6 +14,7 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 ### 🐛 Bug Fixes
 
 - **review:** Drop **no-op inline suggestions**. On large diffs some models (notably `gemini-2.5-flash`) re-emit the existing code verbatim as a "suggestion", producing a wall of zero-diff comments that read as a noisy/broken reviewer. Suggestions whose replacement is byte-identical to the current code (ignoring surrounding whitespace) are now filtered out during validation, so only real changes are posted.
+- **review:** The GitHub review event now follows the review's **recommendation**, not the presence of inline comments. Previously _any_ inline suggestion forced `REQUEST_CHANGES`, so a review that recommended **Approve** but included a minor nit would still block the PR. Now a plain "Approve" → `APPROVE`, "Approve with minor changes" → non-blocking `COMMENT`, and only an explicit "Request changes" → `REQUEST_CHANGES`; anything unparseable falls back to `COMMENT`. If GitHub rejects a formal event (e.g. approving your own PR), the review is retried once as a `COMMENT` so it's never lost.
 
 ---
 
