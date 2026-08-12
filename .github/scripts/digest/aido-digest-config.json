@@ -6,7 +6,7 @@
   "lookbackDays": 7,
   "maxPrs": 40,
   "label": "digest",
-  "destination": "issue",
+  "destination": "discussion",
   "discussionCategory": "Announcements",
   "title": "What shipped",
   "language": "English",
