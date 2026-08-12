@@ -1,0 +1,37 @@
+# Aido Digest — "what shipped" digest (remote install)
+#
+# Optional workflow (alongside aido.yml). Copy to
+# .github/workflows/aido-digest.yml. On a weekly schedule (and on manual
+# dispatch), Aido summarizes the PRs merged in the last window into a digest
+# and posts it as a new GitHub Issue.
+#
+# Configure the window, model, label, etc. by committing
+# .github/scripts/digest/aido-digest-config.json in your repo (see aido-dev/aido).
+#
+# Pinned to the moving `v1` tag: you get the latest v1.x automatically. To pin
+# an exact release instead, set the same tag in BOTH places below (`uses:` and
+# `aido_ref:`), e.g. `@v1.6.0`.
+
+name: Aido Digest
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # Mondays at 09:00 UTC — edit to change cadence
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  aido-digest:
+    uses: aido-dev/aido/.github/workflows/aido-digest.yml@v1
+    with:
+      aido_ref: v1
+    secrets:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      # Add any providers you use:
+      # CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+      # CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+      # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

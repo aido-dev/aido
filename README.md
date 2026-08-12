@@ -172,6 +172,34 @@ digest code they didn't write.
 
 ---
 
+## 🗓️ Weekly "what shipped" digest
+
+On a schedule, Aido summarizes the PRs **merged in the last window** (default 7
+days) into a skimmable digest and posts it as a new **GitHub Issue** (or **Discussion**) —
+_"📦 What shipped — Aug 2 – Aug 9, 2026"_. The digest groups the notable changes
+and includes a line on how many of them were **opened by AI agents**.
+
+- Add `.github/workflows/aido-digest.yml` (copy-based) or `examples/remote/aido-digest.yml` (remote install).
+- Configure the window, model, label, and cadence in `.github/scripts/digest/aido-digest-config.json`.
+- **Only posts when there's something to report** — a quiet window (no merged PRs) produces nothing (`skipEmpty`, default `true`; set to `false` for a weekly heartbeat).
+- **Post to an Issue or a Discussion** — set `destination` to `"issue"` (default) or `"discussion"` (with `discussionCategory`; needs Discussions enabled + `discussions: write`).
+- Runs on a weekly **cron** plus **manual dispatch** — edit the `cron` in the workflow to change cadence (keep `lookbackDays` in sync).
+- Needs `issues: write` (to open the digest issue) and `pull-requests: read`.
+
+```jsonc
+// .github/scripts/digest/aido-digest-config.json
+{
+  "provider": "GEMINI",
+  "model": { "GEMINI": "gemini-2.5-flash" },
+  "lookbackDays": 7,
+  "maxPrs": 40,
+  "label": "digest",
+  "skipEmpty": true,
+}
+```
+
+---
+
 ## 🧩 Use Aido as a GitHub Action (a step in your workflow)
 
 Prefer to control exactly when Aido runs? Add it as a **step** in your own
@@ -293,6 +321,9 @@ Each workflow builds a prompt from PR context (title, body, changed files, **tru
 - **Triage (issues):**
   - Script: `.github/scripts/triage/aido-triage.js`
   - Config: `.github/scripts/triage/aido-triage-config.json` _(adds `candidateLabels`, `severityLabels`, and `applyLabels` to optionally auto-apply suggested labels; default `false`)_
+- **Digest (scheduled "what shipped"):**
+  - Script: `.github/scripts/digest/aido-digest.js`
+  - Config: `.github/scripts/digest/aido-digest-config.json` _(adds `lookbackDays`, `maxPrs`, `label`, `title`, `skipEmpty`, and `aiAuthors`; posts a digest Issue on a schedule)_
 
 > Each config supports: `provider` (CHATGPT|GEMINI|CLAUDE|OPENAI), `model` (a provider-keyed map, e.g. `"model": { "CLAUDE": "claude-opus-5" }`), `baseURL` (for the `OPENAI` provider), `language`, `tone`, `style`, `length`, `include` (title/body/filesSummary/diff), `additionalInstructions`, and an optional `promptTemplate` with placeholders.
 >

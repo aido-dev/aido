@@ -33,6 +33,12 @@ const SYNCED_PAIRS = [
     '.github/scripts/auto/aido-auto-config.json',
     'examples/.github/auto/scripts/aido-auto-config.json',
   ],
+  ['.github/scripts/digest/aido-digest.js', 'examples/.github/digest/scripts/aido-digest.js'],
+  [
+    '.github/scripts/digest/aido-digest-config.json',
+    'examples/.github/digest/scripts/aido-digest-config.json',
+  ],
+  ['.github/workflows/aido-digest.yml', 'examples/.github/digest/workflows/aido-digest.yml'],
   [
     '.github/workflows/aido-summarize.yml',
     'examples/.github/summarize/workflows/aido-summarize.yml',
