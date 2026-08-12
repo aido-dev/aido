@@ -323,6 +323,13 @@ function validateSuggestion(suggestion, lineMap) {
   const actualCode = actualLines.join('\n').trim();
   const suggestedCode = code.trim();
 
+  // Drop no-op suggestions: the replacement is byte-identical to the current
+  // code. Some models (notably gemini-2.5-flash on large diffs) re-emit the
+  // existing lines as a "suggestion", producing noisy zero-diff comments.
+  if (actualCode === suggestedCode) {
+    return { valid: false, reason: 'Suggestion is identical to the current code (no-op)' };
+  }
+
   // Extract key identifiers from both
   const extractIdentifiers = (text) => {
     const words = text.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) || [];

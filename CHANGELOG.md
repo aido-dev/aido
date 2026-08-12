@@ -11,6 +11,10 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 - **digest:** Add the **"what shipped" digest** — a scheduled companion for the whole repo. On a weekly cron (and on manual dispatch), Aido summarizes the PRs merged in the last window (default 7 days) into a skimmable digest and posts it as a new **GitHub Issue** or **Discussion** ("📦 What shipped — …"). The digest groups notable changes and reports how many were **opened by AI agents**. It **only posts when there's something to report** — a quiet window produces nothing (`skipEmpty`, default `true`). Configure the window, model, destination (issue/discussion), label, and cadence in `.github/scripts/digest/aido-digest-config.json`; install via `.github/workflows/aido-digest.yml` (copy-based) or `examples/remote/aido-digest.yml` (remote).
 
+### 🐛 Bug Fixes
+
+- **review:** Drop **no-op inline suggestions**. On large diffs some models (notably `gemini-2.5-flash`) re-emit the existing code verbatim as a "suggestion", producing a wall of zero-diff comments that read as a noisy/broken reviewer. Suggestions whose replacement is byte-identical to the current code (ignoring surrounding whitespace) are now filtered out during validation, so only real changes are posted.
+
 ---
 
 ## [v1.5.2] - 2026-08-10

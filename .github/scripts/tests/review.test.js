@@ -65,6 +65,22 @@ test('validateSuggestion rejects lines outside the diff', () => {
   assert.match(result.reason, /Line 99 not found/);
 });
 
+test('validateSuggestion drops a no-op suggestion identical to the current code', () => {
+  const map = mapFor(['  const info = await octokit.graphql(query, vars);']);
+  const result = validateSuggestion(
+    {
+      startLine: 1,
+      endLine: 1,
+      // Same line the model was "reviewing" — differs only by surrounding whitespace.
+      code: 'const info = await octokit.graphql(query, vars);',
+      issue: 'Explaining efficient GraphQL query design.',
+    },
+    map,
+  );
+  assert.equal(result.valid, false);
+  assert.match(result.reason, /no-op|identical/i);
+});
+
 test('validateSuggestion blocks guard clause removal', () => {
   const map = mapFor(['if (!currentUser) return null;']);
   const result = validateSuggestion(
