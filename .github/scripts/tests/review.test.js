@@ -13,6 +13,7 @@ const {
   makeSuggestionsPrompt,
   suggestionsEnabled,
   capSuggestions,
+  reviewEventFromBody,
 } = require('../review/aido-review');
 
 // --- buildLineMap ---
@@ -63,6 +64,22 @@ test('validateSuggestion rejects lines outside the diff', () => {
   );
   assert.equal(result.valid, false);
   assert.match(result.reason, /Line 99 not found/);
+});
+
+test('validateSuggestion drops a no-op suggestion identical to the current code', () => {
+  const map = mapFor(['  const info = await octokit.graphql(query, vars);']);
+  const result = validateSuggestion(
+    {
+      startLine: 1,
+      endLine: 1,
+      // Same line the model was "reviewing" — differs only by surrounding whitespace.
+      code: 'const info = await octokit.graphql(query, vars);',
+      issue: 'Explaining efficient GraphQL query design.',
+    },
+    map,
+  );
+  assert.equal(result.valid, false);
+  assert.match(result.reason, /no-op|identical/i);
 });
 
 test('validateSuggestion blocks guard clause removal', () => {
@@ -321,4 +338,25 @@ test('capSuggestions: caps to maxSuggestions, ignores invalid, no cap when unset
   assert.deepEqual(capSuggestions(list, { maxSuggestions: 2 }), [1, 2]);
   assert.deepEqual(capSuggestions(list, { maxSuggestions: 0 }), []);
   assert.deepEqual(capSuggestions(list, { maxSuggestions: 'x' }), list);
+});
+
+// --- reviewEventFromBody ---
+
+test('reviewEventFromBody: plain Approve maps to APPROVE (even with inline nits)', () => {
+  assert.equal(reviewEventFromBody('**Recommendation:** Approve\n\nSome notes.'), 'APPROVE');
+  assert.equal(reviewEventFromBody('Recommendation: Approve'), 'APPROVE');
+});
+
+test('reviewEventFromBody: Approve with minor changes maps to COMMENT', () => {
+  assert.equal(reviewEventFromBody('**Recommendation:** Approve with minor changes'), 'COMMENT');
+});
+
+test('reviewEventFromBody: Request changes maps to REQUEST_CHANGES', () => {
+  assert.equal(reviewEventFromBody('**Recommendation:** Request changes'), 'REQUEST_CHANGES');
+});
+
+test('reviewEventFromBody: unrecognized/missing recommendation falls back to COMMENT', () => {
+  assert.equal(reviewEventFromBody('No recommendation line here.'), 'COMMENT');
+  assert.equal(reviewEventFromBody(''), 'COMMENT');
+  assert.equal(reviewEventFromBody(null), 'COMMENT');
 });
