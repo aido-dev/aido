@@ -5,6 +5,7 @@ const {
   ELLIPSIS_MARKER,
   truncate,
   truncateTail,
+  resolveDiffLimit,
   buildFilesSummary,
   fillTemplate,
   modelFooter,
@@ -34,6 +35,31 @@ test('truncateTail keeps only the head with a trailing marker', () => {
   assert.ok(out.endsWith('[truncated]'));
   assert.equal(truncateTail('short', 40), 'short');
   assert.equal(truncateTail('', 40), '');
+});
+
+test('resolveDiffLimit falls back to the default when unset or invalid', () => {
+  assert.equal(resolveDiffLimit(undefined, 60000), 60000);
+  assert.equal(resolveDiffLimit({}, 60000), 60000);
+  assert.equal(resolveDiffLimit({ maxDiffChars: 'abc' }, 60000), 60000);
+  assert.equal(resolveDiffLimit({ maxDiffChars: -5 }, 60000), 60000);
+});
+
+test('resolveDiffLimit honors a positive number', () => {
+  assert.equal(resolveDiffLimit({ maxDiffChars: 120000 }, 60000), 120000);
+  assert.equal(resolveDiffLimit({ maxDiffChars: '30000' }, 60000), 30000);
+});
+
+test('resolveDiffLimit disables truncation for 0/false/"none"/"off"', () => {
+  for (const v of [0, false, 'none', 'off', 'None', ' OFF ', 'full', '0']) {
+    assert.equal(
+      resolveDiffLimit({ maxDiffChars: v }, 60000),
+      Infinity,
+      `for ${JSON.stringify(v)}`,
+    );
+  }
+  // Infinity passed to truncate leaves the input untouched (no marker).
+  const big = 'x'.repeat(100);
+  assert.equal(truncate(big, resolveDiffLimit({ maxDiffChars: 'none' }, 60000)), big);
 });
 
 test('buildFilesSummary handles empty input', () => {

@@ -20,6 +20,24 @@ function truncateTail(str, max) {
   return `${str.slice(0, max)}\n...\n[truncated]`;
 }
 
+/**
+ * Resolve the max diff length (chars) from a command config's `maxDiffChars`.
+ * - a positive number → that many characters
+ * - `0`, `false`, or `"none"`/`"off"` → Infinity (no truncation; the full diff
+ *   is sent, at the cost of tokens and provider request-size limits on huge PRs)
+ * - unset or invalid → `defaultMax`
+ * Pass the result straight to `truncate()` (Infinity leaves the diff untouched).
+ */
+function resolveDiffLimit(config, defaultMax) {
+  const v = config?.maxDiffChars;
+  if (v === 0 || v === false) return Infinity;
+  if (typeof v === 'string' && ['none', 'off', 'full', '0'].includes(v.trim().toLowerCase())) {
+    return Infinity;
+  }
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : defaultMax;
+}
+
 /** Compact "- file (+a/-d, status)" summary of PR files. */
 function buildFilesSummary(files) {
   if (!files || files.length === 0) return 'No files changed.';
@@ -54,6 +72,7 @@ module.exports = {
   ELLIPSIS_MARKER,
   truncate,
   truncateTail,
+  resolveDiffLimit,
   buildFilesSummary,
   fillTemplate,
   modelFooter,

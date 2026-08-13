@@ -5,6 +5,12 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.6.2] - 2026-08-13
+
+### ✨ New Features
+
+- **summarize/explain/docs:** Configurable diff budget via **`maxDiffChars`**, and a **raised default (15,000 → 60,000 chars)**. These commands truncate the PR diff before prompting; the old 15K cap (~4K tokens) was very conservative for today's context windows and could hide large parts of a PR from the summary. Set `maxDiffChars` to any positive number to tune the budget, or **`0` / `"none"`** to send the **full diff** (mind token cost and provider request-size limits on very large PRs). `review` sends the full diff and is unaffected.
+
 ## [v1.6.1] - 2026-08-12
 
 ### 🐛 Bug Fixes

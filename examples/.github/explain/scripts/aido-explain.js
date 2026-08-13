@@ -28,12 +28,19 @@ const {
   postComment,
 } = require('../lib/github');
 const { loadConfig } = require('../lib/config');
-const { truncate, buildFilesSummary, fillTemplate, modelFooter } = require('../lib/text');
+const {
+  truncate,
+  resolveDiffLimit,
+  buildFilesSummary,
+  fillTemplate,
+  modelFooter,
+} = require('../lib/text');
 
 const CONFIG_PATH = path.join(__dirname, 'aido-explain-config.json');
 
-// Diff truncation to keep prompts reasonable
-const DIFF_MAX_CHARS = 15000;
+// Default diff budget (chars). Modern models have large context windows, so this
+// is generous; override per-repo with `maxDiffChars` (0/"none" disables entirely).
+const DIFF_MAX_CHARS = 60000;
 
 // Default configuration
 const DEFAULT_CONFIG = {
@@ -85,7 +92,7 @@ function buildPrompt(config, context) {
     sections.push(`Files Changed:\n${context.filesSummary}`);
   }
   if (include.diff && context.diff) {
-    sections.push(`Unified Diff (truncated):\n${context.diff}`);
+    sections.push(`Unified Diff (may be truncated):\n${context.diff}`);
   }
 
   sections.push(
@@ -141,7 +148,7 @@ async function main() {
     prTitle: pr.title || '',
     prBody: pr.body || '',
     filesSummary: config.include?.filesSummary ? buildFilesSummary(files) : '',
-    diff: truncate(diff, DIFF_MAX_CHARS),
+    diff: truncate(diff, resolveDiffLimit(config, DIFF_MAX_CHARS)),
   });
 
   // Generate explanation
