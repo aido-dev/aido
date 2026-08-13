@@ -331,6 +331,8 @@ Each workflow builds a prompt from PR context (title, body, changed files, **tru
 > Each config supports: `provider` (CHATGPT|GEMINI|CLAUDE|OPENAI), `model` (a provider-keyed map, e.g. `"model": { "CLAUDE": "claude-opus-5" }`), `baseURL` (for the `OPENAI` provider), `language`, `tone`, `style`, `length`, `include` (title/body/filesSummary/diff), `additionalInstructions`, and an optional `promptTemplate` with placeholders.
 >
 > **Choosing a model:** set `model` per provider. Any current Claude model works — Opus (4.6 / 4.7 / 4.8 / 5), Fable 5, Sonnet 4.6, Haiku 4.5. Aido sends no sampling `temperature` to Claude (recent models manage it internally and reject the parameter), so the latest models work out of the box.
+>
+> **Diff size (`summarize` / `explain` / `docs`):** these commands truncate the PR diff to keep prompts efficient. The default budget is **60,000 characters** (raised to match modern context windows). Override per-repo with **`maxDiffChars`** — a positive number sets the budget, and **`0`** or **`"none"`** sends the **full diff** (be mindful of token cost and provider request-size limits on very large PRs). `review` sends the full diff and isn't affected.
 
 ### Bring any model (OpenAI-compatible)
 
