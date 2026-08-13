@@ -298,7 +298,7 @@ Each workflow builds a prompt from PR context (title, body, changed files, **tru
 ## Scripts & Configs
 
 - **Shared library (required by all commands):** `.github/scripts/lib/`
-  - `providers.js` — AI provider wrappers (ChatGPT / Gemini / Claude), model resolution
+  - `providers.js` — AI provider wrappers (ChatGPT / Gemini / Claude, plus a generic **OpenAI-compatible** provider for DeepSeek, Kimi, Grok, Mistral, OpenRouter, and self-hosted gateways), model resolution
   - `github.js` — GitHub API client, event parsing, PR context fetchers, comment posting
   - `config.js` — JSON config loading with defaults and deep merge
   - `text.js` — truncation, files summary, prompt templates, comment footers
@@ -323,9 +323,10 @@ Each workflow builds a prompt from PR context (title, body, changed files, **tru
 - **Triage (issues):**
   - Script: `.github/scripts/triage/aido-triage.js`
   - Config: `.github/scripts/triage/aido-triage-config.json` _(adds `candidateLabels`, `severityLabels`, and `applyLabels` to optionally auto-apply suggested labels; default `false`)_
-- **Digest (scheduled "what shipped"):**
+- **Digest (scheduled "what shipped"; runs on a schedule + manual dispatch, not an `aido <cmd>` comment):**
   - Script: `.github/scripts/digest/aido-digest.js`
-  - Config: `.github/scripts/digest/aido-digest-config.json` _(adds `lookbackDays`, `maxPrs`, `label`, `title`, `skipEmpty`, and `aiAuthors`; posts a digest Issue on a schedule)_
+  - Workflow: `.github/workflows/aido-digest.yml` _(weekly `cron` + `workflow_dispatch`; needs `issues: write` and, for Discussions, `discussions: write`)_
+  - Config: `.github/scripts/digest/aido-digest-config.json` _(adds `lookbackDays`, `maxPrs`, `label`, `title`, `skipEmpty`, `aiAuthors`, and `destination` — `"issue"` (default) or `"discussion"` with `discussionCategory`. Posts the digest as a GitHub Issue or Discussion; with `skipEmpty` (default `true`) a window with no merged PRs posts nothing.)_
 
 > Each config supports: `provider` (CHATGPT|GEMINI|CLAUDE|OPENAI), `model` (a provider-keyed map, e.g. `"model": { "CLAUDE": "claude-opus-5" }`), `baseURL` (for the `OPENAI` provider), `language`, `tone`, `style`, `length`, `include` (title/body/filesSummary/diff), `additionalInstructions`, and an optional `promptTemplate` with placeholders.
 >
