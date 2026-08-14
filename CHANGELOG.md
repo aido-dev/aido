@@ -5,6 +5,12 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.6.3] - 2026-08-14
+
+### 🔒 Security
+
+- **workflows/action:** Pin the runtime SDK installs and disable install scripts. Every command workflow (and the composite action + digest) installed `openai@latest @octokit/rest @google/generative-ai @anthropic-ai/sdk` **unpinned** on each run — jobs that hold provider API keys and `pull-requests: write`. A single malicious upstream publish (or a `postinstall` hook in any transitive dep) would have executed in that privileged context. Installs are now **pinned to exact versions** (`openai@7.4.0`, `@octokit/rest@22.0.1`, `@google/generative-ai@0.24.1`, `@anthropic-ai/sdk@0.117.1`) and run with **`--ignore-scripts`** (plus `--no-audit --no-fund`). npm versions are immutable, so pinning eliminates the "new malicious version" vector and `--ignore-scripts` blocks install-time code execution. All four SDKs are pure-JS (no native build step), so nothing breaks. Update the pins to adopt SDK upgrades.
+
 ## [v1.6.2] - 2026-08-13
 
 ### ✨ New Features

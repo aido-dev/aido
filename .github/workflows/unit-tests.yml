@@ -29,7 +29,7 @@ jobs:
           node-version: '22'
 
       - name: Install test dependencies
-        run: npm install --no-save @octokit/rest
+        run: npm install --no-save --ignore-scripts --no-audit --no-fund @octokit/rest@22.0.1
 
       - name: Run unit tests
         env:

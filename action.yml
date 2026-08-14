@@ -50,7 +50,7 @@ runs:
     - name: Install Aido dependencies
       shell: bash
       working-directory: ${{ github.action_path }}
-      run: npm install --no-save openai @octokit/rest @google/generative-ai @anthropic-ai/sdk
+      run: npm install --no-save --ignore-scripts --no-audit --no-fund openai@7.4.0 @octokit/rest@22.0.1 @google/generative-ai@0.24.1 @anthropic-ai/sdk@0.117.1
 
     - name: Run Aido command
       shell: bash
