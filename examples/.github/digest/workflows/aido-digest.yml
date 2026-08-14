@@ -83,7 +83,7 @@ jobs:
 
       - name: Install dependencies for Aido digest
         run: |
-          npm install openai@latest @octokit/rest @google/generative-ai @anthropic-ai/sdk
+          npm install --ignore-scripts --no-audit --no-fund openai@7.4.0 @octokit/rest@22.0.1 @google/generative-ai@0.24.1 @anthropic-ai/sdk@0.117.1
 
       - name: Run Aido Digest
         env:
