@@ -69,9 +69,11 @@ jobs:
           npm install --ignore-scripts --no-audit --no-fund openai@7.4.0 @octokit/rest@22.0.1 @google/generative-ai@0.24.1 @anthropic-ai/sdk@0.117.1
 
       - name: Create synthetic GitHub event (PR context)
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
         run: |
           EVENT_FILE="$RUNNER_TEMP/aido_event.json"
-          echo "{\"pull_request\":{\"number\": ${{ inputs.pr_number }}}}" > "$EVENT_FILE"
+          echo "{\"pull_request\":{\"number\": \"$PR_NUMBER\"}}" > "$EVENT_FILE"
           echo "EVENT_FILE=$EVENT_FILE" >> $GITHUB_ENV
 
       - name: Run Aido Summarize
