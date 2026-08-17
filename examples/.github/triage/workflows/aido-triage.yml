@@ -68,9 +68,11 @@ jobs:
           npm install --ignore-scripts --no-audit --no-fund openai@7.4.0 @octokit/rest@22.0.1 @google/generative-ai@0.24.1 @anthropic-ai/sdk@0.117.1
 
       - name: Create synthetic GitHub event (issue context)
+        env:
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
         run: |
           EVENT_FILE="$RUNNER_TEMP/aido_event.json"
-          echo "{\"issue\":{\"number\": \"${{ inputs.issue_number }}\"}}" > "$EVENT_FILE"
+          echo "{\"issue\":{\"number\": \"$ISSUE_NUMBER\"}}" > "$EVENT_FILE"
           echo "EVENT_FILE=$EVENT_FILE" >> $GITHUB_ENV
 
       - name: Run Aido Triage (classify, suggest labels, find similar)

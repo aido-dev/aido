@@ -5,6 +5,12 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.6.4] - 2026-08-17
+
+### 🔒 Security
+
+- **workflows:** Pass PR/issue numbers to the synthetic-event step via `env:` instead of splicing `${{ inputs.pr_number }}` / `${{ inputs.issue_number }}` directly into the `run:` shell. Not exploitable today (the inputs are typed `number` and sourced from GitHub integers), but it removes the script-injection anti-pattern — the value is now quoted by the runner as an environment variable and referenced as `$PR_NUMBER` / `$ISSUE_NUMBER`. Applied to all command workflows (review, summarize, explain, docs, suggest, test, triage) and their example copies. (Audit finding L1.)
+
 ## [v1.6.3] - 2026-08-14
 
 ### 🔒 Security
