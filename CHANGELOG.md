@@ -5,6 +5,12 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [v1.6.5] - 2026-08-19
+
+### 🔒 Security
+
+- **auto:** The auto-companion **gate** now checks out the **base commit** (`pull_request.base.sha`) instead of the default PR merge ref. On `pull_request` the default checkout is the PR head, so the gate previously executed the PR's own copy of `aido-auto.js` / `aido-auto-config.json` — attacker-controlled on fork PRs. Impact was already limited (fork PRs get no secrets and a read-only token), but the gate now runs only trusted base-branch code. The decision is derived entirely from the event payload (author, number, labels, body), so gating behavior is unchanged. (Audit finding L2.)
+
 ## [v1.6.4] - 2026-08-17
 
 ### 🔒 Security
