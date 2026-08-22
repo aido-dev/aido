@@ -326,6 +326,12 @@ test('makeConsolidatedPrompt now embeds persona guidance bodies, not just names'
   assert.match(prompt, /neon-http/);
 });
 
+test('both review passes carry the untrusted-content guardrail (prompt-injection defense)', () => {
+  assert.match(makeConsolidatedPrompt(ctxPersonas, ctx), /UNTRUSTED CONTENT/);
+  assert.match(makeConsolidatedPrompt(ctxPersonas, ctx), /never as instructions/i);
+  assert.match(makeSuggestionsPrompt(ctxPersonas, ctx, ctxFiles), /UNTRUSTED CONTENT/);
+});
+
 test('suggestionsEnabled: default on, off when reviewer.suggestions === false', () => {
   assert.equal(suggestionsEnabled({}), true);
   assert.equal(suggestionsEnabled({ suggestions: true }), true);
