@@ -42,6 +42,7 @@
 const fs = require('fs');
 const path = require('path');
 const { DEFAULT_MODELS, generate } = require('../lib/providers');
+const { SECURITY_GUARDRAIL } = require('../lib/text');
 const {
   octokit,
   getRepo,
@@ -97,6 +98,8 @@ function personaGuidanceBlock(personas) {
 function reviewerContextBlock(personas, context) {
   const guidance = personaGuidanceBlock(personas);
   const parts = [
+    SECURITY_GUARDRAIL,
+    '',
     'PROJECT CONTEXT / CONSTRAINTS (house rules — honor these; they override generic best-practice advice):',
     guidance || '(no reviewer personas configured)',
     '',
@@ -168,6 +171,8 @@ function makeConsolidatedPrompt(personas, context) {
   const personasList = personas.map((p) => displayLabel(p)).join(', ');
   const guidance = personaGuidanceBlock(personas);
   return `
+${SECURITY_GUARDRAIL}
+
 ROLE:
 You are a world-class code review agent acting as multiple specialists: ${personasList}.
 Operate within GitHub PR constraints. Be precise, constructive, and strictly follow these rules.
