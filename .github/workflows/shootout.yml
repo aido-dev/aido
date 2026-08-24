@@ -1,0 +1,57 @@
+# TEMPORARY — multi-model review shootout for article material.
+# Runs the Aido review script three times (Claude / ChatGPT / Gemini) against
+# the same PR, same personas, different model via AIDO_PROVIDER/AIDO_MODEL.
+# Lives only on the demo branch; delete after capturing the reviews.
+name: Shootout
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+
+jobs:
+  review:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - provider: CLAUDE
+            model: claude-sonnet-4-6
+          - provider: CHATGPT
+            model: gpt-4o
+          - provider: GEMINI
+            model: gemini-2.5-pro
+    name: review-${{ matrix.provider }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts --no-audit --no-fund openai@7.4.0 @octokit/rest@22.0.1 @google/generative-ai@0.24.1 @anthropic-ai/sdk@0.117.1
+      - name: Create synthetic PR event
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          EVENT_FILE="$RUNNER_TEMP/aido_event.json"
+          echo "{\"pull_request\":{\"number\": \"$PR_NUMBER\"}}" > "$EVENT_FILE"
+          echo "EVENT_FILE=$EVENT_FILE" >> "$GITHUB_ENV"
+      - name: Run review (${{ matrix.provider }} / ${{ matrix.model }})
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_EVENT_PATH: ${{ env.EVENT_FILE }}
+          AIDO_PROVIDER: ${{ matrix.provider }}
+          AIDO_MODEL: ${{ matrix.model }}
+        run: node .github/scripts/review/aido-review.js
