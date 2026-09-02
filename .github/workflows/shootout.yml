@@ -5,11 +5,15 @@
 name: Shootout
 
 on:
+  # Runs on push to this demo branch (workflow_dispatch only works from the
+  # default branch, and this workflow lives only here). PR number hardcoded.
+  push:
+    branches: [demo/multimodel-shootout]
   workflow_dispatch:
     inputs:
       pr_number:
         description: 'PR number to review'
-        required: true
+        required: false
         type: string
 
 permissions:
@@ -39,7 +43,7 @@ jobs:
       - run: npm install --ignore-scripts --no-audit --no-fund openai@7.4.0 @octokit/rest@22.0.1 @google/generative-ai@0.24.1 @anthropic-ai/sdk@0.117.1
       - name: Create synthetic PR event
         env:
-          PR_NUMBER: ${{ inputs.pr_number }}
+          PR_NUMBER: ${{ inputs.pr_number || '105' }}
         run: |
           EVENT_FILE="$RUNNER_TEMP/aido_event.json"
           echo "{\"pull_request\":{\"number\": \"$PR_NUMBER\"}}" > "$EVENT_FILE"
