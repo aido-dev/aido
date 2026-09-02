@@ -58,4 +58,7 @@ jobs:
           GITHUB_EVENT_PATH: ${{ env.EVENT_FILE }}
           AIDO_PROVIDER: ${{ matrix.provider }}
           AIDO_MODEL: ${{ matrix.model }}
-        run: node .github/scripts/review/aido-review.js
+        run: |
+          echo "REPO=$GITHUB_REPOSITORY EVENT_PATH=$GITHUB_EVENT_PATH"
+          echo "--- event file ---"; cat "$GITHUB_EVENT_PATH" || echo "(missing)"; echo "---"
+          node .github/scripts/review/aido-review.js
