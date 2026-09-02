@@ -41,6 +41,8 @@ rendered output in GitHub:
 | `aido summarize` | High-level summary for stakeholders                         | [PR #68](https://github.com/aido-dev/aido/pull/68) |
 | `aido docs`      | Draft/augment documentation                                 | [PR #69](https://github.com/aido-dev/aido/pull/69) |
 
+> 🔬 **One PR, three models:** [**PR #106**](https://github.com/aido-dev/aido/pull/106) reviews the **same diff with Claude, ChatGPT, and Gemini** side by side — same personas, different provider. A concrete look at what "bring your own model" buys you: each catches the core bugs, but they differ on depth and which second-order issues they flag.
+
 <details>
 <summary><b>Sample: <code>aido review</code> catching real bugs</b> (from PR #64)</summary>
 
