@@ -41,13 +41,6 @@ jobs:
         with:
           node-version: '22'
       - run: npm install --ignore-scripts --no-audit --no-fund openai@7.4.0 @octokit/rest@22.0.1 @google/generative-ai@0.24.1 @anthropic-ai/sdk@0.117.1
-      - name: Create synthetic PR event
-        env:
-          PR_NUMBER: ${{ inputs.pr_number || '105' }}
-        run: |
-          EVENT_FILE="$RUNNER_TEMP/aido_event.json"
-          echo "{\"pull_request\":{\"number\": \"$PR_NUMBER\"}}" > "$EVENT_FILE"
-          echo "EVENT_FILE=$EVENT_FILE" >> "$GITHUB_ENV"
       - name: Run review (${{ matrix.provider }} / ${{ matrix.model }})
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -55,10 +48,11 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GITHUB_EVENT_PATH: ${{ env.EVENT_FILE }}
+          # Fixed path (runner.temp resolves at compile time) — write and read in
+          # the same step so no cross-step $GITHUB_ENV dependency is involved.
+          GITHUB_EVENT_PATH: ${{ runner.temp }}/aido_event.json
           AIDO_PROVIDER: ${{ matrix.provider }}
           AIDO_MODEL: ${{ matrix.model }}
         run: |
-          echo "REPO=$GITHUB_REPOSITORY EVENT_PATH=$GITHUB_EVENT_PATH"
-          echo "--- event file ---"; cat "$GITHUB_EVENT_PATH" || echo "(missing)"; echo "---"
+          echo '{"pull_request":{"number":105}}' > "$GITHUB_EVENT_PATH"
           node .github/scripts/review/aido-review.js
