@@ -5,6 +5,121 @@
 const ELLIPSIS_MARKER = '\n...\n[truncated]\n...\n';
 
 /**
+ * Paths that are near-universally noise in a code review — lockfiles, minified
+ * bundles, source maps, build/vendor output, snapshots, and generated code.
+ * Excluding them from the diff sent to the LLM cuts tokens sharply (a single
+ * lockfile bump can be thousands of lines) and improves review quality.
+ */
+const DEFAULT_EXCLUDE_GLOBS = [
+  '**/package-lock.json',
+  '**/npm-shrinkwrap.json',
+  '**/yarn.lock',
+  '**/pnpm-lock.yaml',
+  '**/bun.lockb',
+  '**/composer.lock',
+  '**/Gemfile.lock',
+  '**/poetry.lock',
+  '**/Cargo.lock',
+  '**/go.sum',
+  '**/*.min.js',
+  '**/*.min.css',
+  '**/*.map',
+  '**/dist/**',
+  '**/build/**',
+  '**/vendor/**',
+  '**/node_modules/**',
+  '**/__snapshots__/**',
+  '**/*.snap',
+  '**/*.generated.*',
+  '**/*.pb.go',
+];
+
+// Compiled globs are cached so repeated path checks (once per changed file)
+// don't recompile the same patterns. Patterns are linear (`.*` / `[^/]*`,
+// no nested quantifiers) and come from config, so there's no ReDoS surface.
+const _globRegExpCache = new Map();
+
+/**
+ * Compile a glob to a RegExp (memoized). Supports:
+ * - `*`  — any run of non-`/` characters (within a path segment)
+ * - `**` — any characters, crossing `/` boundaries
+ * - a leading `**` + `/` — zero or more leading directories (matches at the repo root too)
+ * - `?`  — a single non-`/` character
+ */
+function globToRegExp(glob) {
+  const g = String(glob);
+  const cached = _globRegExpCache.get(g);
+  if (cached) return cached;
+  let re = '^';
+  let i = 0;
+  while (i < g.length) {
+    if (g.startsWith('**/', i)) {
+      re += '(?:.*/)?'; // any leading directories, or none
+      i += 3;
+      continue;
+    }
+    const c = g[i];
+    if (c === '*') {
+      if (g[i + 1] === '*') {
+        re += '.*';
+        i += 2;
+      } else {
+        re += '[^/]*';
+        i += 1;
+      }
+      continue;
+    }
+    if (c === '?') {
+      re += '[^/]';
+    } else if ('.+^${}()|[]\\'.includes(c)) {
+      re += '\\' + c;
+    } else {
+      re += c;
+    }
+    i++;
+  }
+  const compiled = new RegExp(re + '$');
+  _globRegExpCache.set(g, compiled);
+  return compiled;
+}
+
+/** Whether a file path matches any of the exclude globs. */
+function isExcludedPath(filename, globs) {
+  if (!filename) return false;
+  return (globs || []).some((g) => globToRegExp(g).test(filename));
+}
+
+/**
+ * Resolve the effective exclude globs from a config: built-in defaults plus any
+ * `excludePaths` the caller adds. Set `excludeDefaults: false` to drop the
+ * built-ins and use only `excludePaths`.
+ */
+function resolveExcludeGlobs(config) {
+  const extra = Array.isArray(config?.excludePaths) ? config.excludePaths : [];
+  return config?.excludeDefaults === false ? extra : [...DEFAULT_EXCLUDE_GLOBS, ...extra];
+}
+
+/**
+ * Drop file sections whose path matches an exclude glob from a unified diff.
+ * Returns `{ diff, excluded }` where `excluded` lists the dropped file paths.
+ * Splits on `diff --git` boundaries and matches the new (`b/`) path.
+ */
+function filterDiffByPath(diff, globs) {
+  if (!diff) return { diff: '', excluded: [] };
+  if (!globs || globs.length === 0) return { diff, excluded: [] };
+  const parts = diff.split(/(?=^diff --git )/m);
+  const kept = [];
+  const excluded = [];
+  for (const part of parts) {
+    const m = /^diff --git a\/.+ b\/(.+)$/m.exec(part);
+    const path = m ? m[1] : null;
+    if (path && isExcludedPath(path, globs)) excluded.push(path);
+    else kept.push(part);
+  }
+  return { diff: kept.join(''), excluded };
+}
+
+/**
  * Prompt guardrail against prompt injection. PR/issue titles, bodies, diffs, and
  * comments are attacker-controllable; inject this so the model treats them as
  * data, never as instructions. Reusable across commands.
@@ -85,6 +200,11 @@ function modelFooter(model) {
 module.exports = {
   ELLIPSIS_MARKER,
   SECURITY_GUARDRAIL,
+  DEFAULT_EXCLUDE_GLOBS,
+  globToRegExp,
+  isExcludedPath,
+  resolveExcludeGlobs,
+  filterDiffByPath,
   truncate,
   truncateTail,
   resolveDiffLimit,

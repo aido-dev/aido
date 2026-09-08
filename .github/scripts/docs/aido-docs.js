@@ -39,7 +39,14 @@ const {
   postComment,
 } = require('../lib/github');
 const { loadConfig } = require('../lib/config');
-const { truncate, resolveDiffLimit, buildFilesSummary, fillTemplate } = require('../lib/text');
+const {
+  truncate,
+  resolveDiffLimit,
+  filterDiffByPath,
+  resolveExcludeGlobs,
+  buildFilesSummary,
+  fillTemplate,
+} = require('../lib/text');
 
 const CONFIG_PATH = path.join(__dirname, 'aido-docs-config.json');
 
@@ -154,7 +161,8 @@ async function main() {
   // Build PR context
   const pr = await getPr(owner, repo, prNumber);
   const files = await getPrFiles(owner, repo, prNumber);
-  const diff = config.include?.diff ? await getPrDiff(owner, repo, prNumber) : '';
+  const rawDiff = config.include?.diff ? await getPrDiff(owner, repo, prNumber) : '';
+  const { diff } = filterDiffByPath(rawDiff, resolveExcludeGlobs(config));
 
   const prompt = buildPrompt(config, {
     prTitle: pr.title || '',

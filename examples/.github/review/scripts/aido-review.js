@@ -42,7 +42,12 @@
 const fs = require('fs');
 const path = require('path');
 const { DEFAULT_MODELS, generate } = require('../lib/providers');
-const { SECURITY_GUARDRAIL } = require('../lib/text');
+const {
+  SECURITY_GUARDRAIL,
+  isExcludedPath,
+  resolveExcludeGlobs,
+  filterDiffByPath,
+} = require('../lib/text');
 const {
   octokit,
   getRepo,
@@ -126,7 +131,16 @@ function capSuggestions(list, reviewerCfg) {
 async function getPrContext(owner, repo, prNumber) {
   const pr = await getPr(owner, repo, prNumber);
   const { issueTitle, issueBody } = await getLinkedIssue(owner, repo, pr.body);
-  const diff = await getPrDiff(owner, repo, prNumber);
+  const rawDiff = await getPrDiff(owner, repo, prNumber);
+
+  // Drop non-reviewable noise (lockfiles, minified/build/vendor, generated, …)
+  // before it reaches the prompt — cuts tokens and review noise.
+  const { diff, excluded } = filterDiffByPath(rawDiff, resolveExcludeGlobs(reviewerCfg));
+  if (excluded.length) {
+    console.log(
+      `[Aido] Excluded ${excluded.length} non-reviewable file(s): ${excluded.join(', ')}`,
+    );
+  }
 
   return {
     prTitle: pr.title,
@@ -140,7 +154,10 @@ async function getPrContext(owner, repo, prNumber) {
 
 async function getCommentableFiles(owner, repo, prNumber) {
   const files = await getPrFiles(owner, repo, prNumber);
-  const commentableFiles = files.filter((f) => f.patch && f.status !== 'removed');
+  const excludeGlobs = resolveExcludeGlobs(reviewerCfg);
+  const commentableFiles = files.filter(
+    (f) => f.patch && f.status !== 'removed' && !isExcludedPath(f.filename, excludeGlobs),
+  );
 
   console.log('\n=== PR Files and Patches ===');
   commentableFiles.forEach((f) => {

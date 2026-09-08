@@ -19,6 +19,12 @@ Every command config supports:
 
 **Diff size (`summarize` / `explain` / `docs`):** these commands truncate the PR diff to keep prompts efficient. The default budget is **60,000 characters**. Override per-repo with **`maxDiffChars`** — a positive number sets the budget; **`0`** or **`"none"`** sends the **full diff** (mind token cost and provider request-size limits on very large PRs). `review` sends the **full diff** and is unaffected.
 
+**Excluding noise files (`excludePaths`):** `review`, `summarize`, `explain`, and `docs` strip non-reviewable files from the diff before prompting — lockfiles (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `go.sum`, `Cargo.lock`, …), minified bundles (`*.min.js`/`*.min.css`), source maps, `dist/`·`build/`·`vendor/`·`node_modules/`, snapshots, and generated files. This cuts token usage and review noise. Add your own globs via **`excludePaths`** (unioned with the built-in defaults); set **`excludeDefaults: false`** to use only your list. Excluded files are also skipped for inline suggestions.
+
+```jsonc
+{ "excludePaths": ["**/*.csv", "docs/generated/**"] }
+```
+
 ## Per-command scripts & configs
 
 - **Shared library (required by all commands):** `.github/scripts/lib/`

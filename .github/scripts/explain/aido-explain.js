@@ -31,6 +31,8 @@ const { loadConfig } = require('../lib/config');
 const {
   truncate,
   resolveDiffLimit,
+  filterDiffByPath,
+  resolveExcludeGlobs,
   buildFilesSummary,
   fillTemplate,
   modelFooter,
@@ -142,7 +144,8 @@ async function main() {
   // Build context
   const pr = await getPr(owner, repo, prNumber);
   const files = await getPrFiles(owner, repo, prNumber);
-  const diff = config.include?.diff ? await getPrDiff(owner, repo, prNumber) : '';
+  const rawDiff = config.include?.diff ? await getPrDiff(owner, repo, prNumber) : '';
+  const { diff } = filterDiffByPath(rawDiff, resolveExcludeGlobs(config));
 
   const prompt = buildPrompt(config, {
     prTitle: pr.title || '',
