@@ -6,6 +6,10 @@ const {
   truncate,
   truncateTail,
   resolveDiffLimit,
+  isExcludedPath,
+  resolveExcludeGlobs,
+  filterDiffByPath,
+  DEFAULT_EXCLUDE_GLOBS,
   buildFilesSummary,
   fillTemplate,
   modelFooter,
@@ -60,6 +64,54 @@ test('resolveDiffLimit disables truncation for 0/false/"none"/"off"', () => {
   // Infinity passed to truncate leaves the input untouched (no marker).
   const big = 'x'.repeat(100);
   assert.equal(truncate(big, resolveDiffLimit({ maxDiffChars: 'none' }, 60000)), big);
+});
+
+test('isExcludedPath matches lockfiles/minified/build, not source', () => {
+  const g = DEFAULT_EXCLUDE_GLOBS;
+  assert.equal(isExcludedPath('package-lock.json', g), true);
+  assert.equal(isExcludedPath('frontend/package-lock.json', g), true);
+  assert.equal(isExcludedPath('pnpm-lock.yaml', g), true);
+  assert.equal(isExcludedPath('assets/app.min.js', g), true);
+  assert.equal(isExcludedPath('dist/bundle.js', g), true);
+  assert.equal(isExcludedPath('a/b/vendor/x.go', g), true);
+  assert.equal(isExcludedPath('src/index.ts', g), false);
+  assert.equal(isExcludedPath('lib/text.js', g), false);
+});
+
+test('resolveExcludeGlobs unions defaults with excludePaths, or replaces when excludeDefaults=false', () => {
+  assert.ok(resolveExcludeGlobs({}).includes('**/package-lock.json'));
+  const withExtra = resolveExcludeGlobs({ excludePaths: ['**/*.csv'] });
+  assert.ok(withExtra.includes('**/*.csv') && withExtra.includes('**/yarn.lock'));
+  assert.deepEqual(resolveExcludeGlobs({ excludeDefaults: false, excludePaths: ['**/*.csv'] }), [
+    '**/*.csv',
+  ]);
+});
+
+test('filterDiffByPath drops excluded file sections and reports them', () => {
+  const diff = [
+    'diff --git a/src/app.js b/src/app.js',
+    '@@ -1 +1 @@',
+    '+const x = 1;',
+    'diff --git a/package-lock.json b/package-lock.json',
+    '@@ -1 +1 @@',
+    '+  "lockfileVersion": 3,',
+    'diff --git a/dist/bundle.js b/dist/bundle.js',
+    '@@ -1 +1 @@',
+    '+minified',
+  ].join('\n');
+  const { diff: kept, excluded } = filterDiffByPath(diff, DEFAULT_EXCLUDE_GLOBS);
+  assert.match(kept, /src\/app\.js/);
+  assert.doesNotMatch(kept, /package-lock\.json/);
+  assert.doesNotMatch(kept, /dist\/bundle\.js/);
+  assert.deepEqual(excluded.sort(), ['dist/bundle.js', 'package-lock.json']);
+});
+
+test('filterDiffByPath is a no-op for empty diff or empty globs', () => {
+  assert.deepEqual(filterDiffByPath('', DEFAULT_EXCLUDE_GLOBS), { diff: '', excluded: [] });
+  assert.deepEqual(filterDiffByPath('diff --git a/x b/x\n+y', []), {
+    diff: 'diff --git a/x b/x\n+y',
+    excluded: [],
+  });
 });
 
 test('buildFilesSummary handles empty input', () => {
