@@ -14,6 +14,7 @@ const {
   suggestionsEnabled,
   capSuggestions,
   reviewEventFromBody,
+  isTemplateRefPath,
 } = require('../review/aido-review');
 
 // --- buildLineMap ---
@@ -365,4 +366,14 @@ test('reviewEventFromBody: unrecognized/missing recommendation falls back to COM
   assert.equal(reviewEventFromBody('No recommendation line here.'), 'COMMENT');
   assert.equal(reviewEventFromBody(''), 'COMMENT');
   assert.equal(reviewEventFromBody(null), 'COMMENT');
+});
+
+// --- isTemplateRefPath (context-check false-positive fix) ---
+
+test('isTemplateRefPath flags examples/ template copies, not real scripts', () => {
+  assert.equal(isTemplateRefPath('examples/.github/review/scripts/aido-review.js'), true);
+  assert.equal(isTemplateRefPath('some/nested/examples/x.js'), true);
+  assert.equal(isTemplateRefPath('.github/scripts/review/aido-review.js'), false);
+  assert.equal(isTemplateRefPath('src/examplesData.js'), false); // not an examples/ dir
+  assert.equal(isTemplateRefPath(''), false);
 });

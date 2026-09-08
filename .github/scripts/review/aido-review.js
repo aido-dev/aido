@@ -618,6 +618,16 @@ function resolveJsImportPath(baseDir, spec) {
   return candidates.map((p) => path.join(baseDir, p));
 }
 
+/**
+ * Whether a path is a template copy under `examples/`. Those files import
+ * `../lib/*` (etc.) that only resolve once dropped into a real repo's
+ * `.github/scripts/`, so reference-existence checks would always false-positive
+ * on them. Skip ref checks for such paths.
+ */
+function isTemplateRefPath(filename) {
+  return /(?:^|\/)examples\//.test(filename || '');
+}
+
 async function collectContextChecks(owner, repo, context, files, reviewerCfg) {
   const findings = [];
   const verifyRefs =
@@ -651,7 +661,9 @@ async function collectContextChecks(owner, repo, context, files, reviewerCfg) {
 
   if (verifyRefs) {
     // Python import checks
-    for (const f of files.filter((x) => x.filename.endsWith('.py'))) {
+    for (const f of files.filter(
+      (x) => x.filename.endsWith('.py') && !isTemplateRefPath(x.filename),
+    )) {
       const baseDir = path.dirname(f.filename);
       const src = fileContents[f.filename] || '';
 
@@ -694,7 +706,9 @@ async function collectContextChecks(owner, repo, context, files, reviewerCfg) {
     }
 
     // JS/TS import checks
-    for (const f of files.filter((x) => /\.(?:[cm]?jsx?|tsx?)$/.test(x.filename))) {
+    for (const f of files.filter(
+      (x) => /\.(?:[cm]?jsx?|tsx?)$/.test(x.filename) && !isTemplateRefPath(x.filename),
+    )) {
       const baseDir = path.dirname(f.filename);
       const src = fileContents[f.filename] || '';
 
@@ -1022,4 +1036,5 @@ module.exports = {
   suggestionsEnabled,
   capSuggestions,
   reviewEventFromBody,
+  isTemplateRefPath,
 };

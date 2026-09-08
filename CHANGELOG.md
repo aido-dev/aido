@@ -5,6 +5,12 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [Unreleased]
+
+### 🐛 Bug Fixes
+
+- **review:** Stop the context-check from false-flagging `examples/` template copies. Those files import `../lib/*` that only resolve once installed into a real repo's `.github/scripts/`, so the import-existence check reported spurious "JS import missing" findings on any PR touching `examples/`. Reference checks now skip `examples/` paths.
+
 ## [v1.6.7] - 2026-09-08
 
 ### ✨ New Features
