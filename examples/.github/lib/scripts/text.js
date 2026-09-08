@@ -43,7 +43,7 @@ const _globRegExpCache = new Map();
  * Compile a glob to a RegExp (memoized). Supports:
  * - `*`  — any run of non-`/` characters (within a path segment)
  * - `**` — any characters, crossing `/` boundaries
- * - a leading `** /` — zero or more leading directories (so `**​/x` matches `x` at root)
+ * - a leading `**` + `/` — zero or more leading directories (matches at the repo root too)
  * - `?`  — a single non-`/` character
  */
 function globToRegExp(glob) {
