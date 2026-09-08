@@ -802,26 +802,37 @@ async function main() {
     return generate(provider, prompt, opts);
   };
 
-  const consolidatedPrompt = makeConsolidatedPrompt(personas, context);
-  const consolidated = await callProvider(consolidatedPrompt);
+  // The consolidated review and the inline-suggestions pass are independent
+  // (neither uses the other's output), so run them concurrently to roughly
+  // halve wall-clock latency. The suggestions pass is best-effort: wrap it so a
+  // rejection is captured as a value (never an unhandled rejection if the
+  // required consolidated pass throws first).
+  const consolidatedPromise = callProvider(makeConsolidatedPrompt(personas, context));
+  const suggestionsPromise = suggestionsEnabled(reviewerCfg)
+    ? callProvider(makeSuggestionsPrompt(personas, context, files)).then(
+        (text) => ({ text }),
+        (err) => ({ err }),
+      )
+    : null;
 
+  const consolidated = await consolidatedPromise;
   console.log('Consolidated review completed');
 
   // Suggestions-only pass (best-effort; skippable via reviewer.suggestions=false).
-  // It now receives the shared reviewer context so it honors the same personas
+  // It receives the shared reviewer context so it honors the same personas
   // and house rules as the consolidated review above.
   let suggestionsOnlyText = '';
   let suggestionsError = null;
-  if (suggestionsEnabled(reviewerCfg)) {
-    const suggestionsOnlyPrompt = makeSuggestionsPrompt(personas, context, files);
-    try {
-      suggestionsOnlyText = await callProvider(suggestionsOnlyPrompt);
-      console.log('Suggestions extraction completed');
-    } catch (e) {
-      suggestionsError = e;
+  if (suggestionsPromise) {
+    const res = await suggestionsPromise;
+    if (res.err) {
+      suggestionsError = res.err;
       console.error(
-        `Suggestions pass failed; posting review body without inline suggestions: ${e?.message || e}`,
+        `Suggestions pass failed; posting review body without inline suggestions: ${res.err?.message || res.err}`,
       );
+    } else {
+      suggestionsOnlyText = res.text;
+      console.log('Suggestions extraction completed');
     }
   } else {
     console.log('Inline suggestions disabled via reviewer.suggestions=false');
