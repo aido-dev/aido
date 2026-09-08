@@ -66,6 +66,20 @@ test('resolveDiffLimit disables truncation for 0/false/"none"/"off"', () => {
   assert.equal(truncate(big, resolveDiffLimit({ maxDiffChars: 'none' }, 60000)), big);
 });
 
+test('globToRegExp translates * / ** / ? and leading **/ correctly', () => {
+  const { globToRegExp } = require('../lib/text');
+  assert.ok(globToRegExp('**/*.min.js').test('a/b/app.min.js'));
+  assert.ok(globToRegExp('**/*.min.js').test('app.min.js')); // leading **/ = optional dirs
+  assert.ok(!globToRegExp('**/*.min.js').test('app.js'));
+  assert.ok(globToRegExp('dist/**').test('dist/a/b.js'));
+  assert.ok(!globToRegExp('dist/**').test('src/a.js'));
+  assert.ok(globToRegExp('*.snap').test('x.snap'));
+  assert.ok(!globToRegExp('*.snap').test('a/x.snap')); // single * stays within a segment
+  assert.ok(globToRegExp('file-?.txt').test('file-1.txt'));
+  // memoized: same pattern returns the same RegExp instance
+  assert.equal(globToRegExp('**/*.map'), globToRegExp('**/*.map'));
+});
+
 test('isExcludedPath matches lockfiles/minified/build, not source', () => {
   const g = DEFAULT_EXCLUDE_GLOBS;
   assert.equal(isExcludedPath('package-lock.json', g), true);

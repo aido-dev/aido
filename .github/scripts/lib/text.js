@@ -34,9 +34,22 @@ const DEFAULT_EXCLUDE_GLOBS = [
   '**/*.pb.go',
 ];
 
-/** Compile a glob (supporting `*`, `**`, `?`, and a leading `** /`) to a RegExp. */
+// Compiled globs are cached so repeated path checks (once per changed file)
+// don't recompile the same patterns. Patterns are linear (`.*` / `[^/]*`,
+// no nested quantifiers) and come from config, so there's no ReDoS surface.
+const _globRegExpCache = new Map();
+
+/**
+ * Compile a glob to a RegExp (memoized). Supports:
+ * - `*`  — any run of non-`/` characters (within a path segment)
+ * - `**` — any characters, crossing `/` boundaries
+ * - a leading `** /` — zero or more leading directories (so `**​/x` matches `x` at root)
+ * - `?`  — a single non-`/` character
+ */
 function globToRegExp(glob) {
   const g = String(glob);
+  const cached = _globRegExpCache.get(g);
+  if (cached) return cached;
   let re = '^';
   let i = 0;
   while (i < g.length) {
@@ -65,7 +78,9 @@ function globToRegExp(glob) {
     }
     i++;
   }
-  return new RegExp(re + '$');
+  const compiled = new RegExp(re + '$');
+  _globRegExpCache.set(g, compiled);
+  return compiled;
 }
 
 /** Whether a file path matches any of the exclude globs. */
