@@ -12,7 +12,7 @@
 
 const DEFAULT_MODELS = {
   CHATGPT: 'gpt-4o-mini',
-  GEMINI: 'gemini-2.5-flash',
+  GEMINI: 'gemini-3.6-flash',
   CLAUDE: 'claude-3-5-sonnet-latest',
 };
 
