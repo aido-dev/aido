@@ -46,7 +46,7 @@ Live examples (this repo's own digest): [as an Issue](https://github.com/aido-de
 // .github/scripts/digest/aido-digest-config.json
 {
   "provider": "GEMINI",
-  "model": { "GEMINI": "gemini-2.5-flash" },
+  "model": { "GEMINI": "gemini-3.6-flash" },
   "lookbackDays": 7,
   "maxPrs": 40,
   "label": "digest",

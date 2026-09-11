@@ -66,7 +66,7 @@ Controls provider, model, tone, style, included PR context, and output length.
 ### Fields
 
 - **provider**: Which AI provider to use (`CHATGPT` | `GEMINI` | `CLAUDE`).
-- **model**: Mapping of provider → model name (e.g. `"gemini-2.5-flash"`).
+- **model**: Mapping of provider → model name (e.g. `"gemini-3.6-flash"`).
 - **language**: Output language (e.g. `"English"`, `"Spanish"`, `"Cowboy English"`).
 - **tone**: Writing tone (e.g. `"executive, concise, professional"`).
 - **style**: Summary style (e.g. `"bullet-points"`, `"paragraph"`).

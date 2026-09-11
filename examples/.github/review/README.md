@@ -37,7 +37,7 @@ Minimal example:
     {
       "reviewer": {
         "provider": "GEMINI",
-        "model": "gemini-2.5-flash",
+        "model": "gemini-3.6-flash",
         "verifyReferences": true,
         "checkDescriptionConsistency": true
       },

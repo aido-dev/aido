@@ -7,6 +7,10 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ## [Unreleased]
 
+### ✨ New Features
+
+- **providers:** Default Gemini model is now **`gemini-3.6-flash`** (was `gemini-2.5-flash`). Updated the code default and every shipped config/example. Override anytime with `"model": { "GEMINI": "…" }`.
+
 ### 🐛 Bug Fixes
 
 - **review:** Stop the context-check from false-flagging `examples/` template copies. Those files import `../lib/*` that only resolve once installed into a real repo's `.github/scripts/`, so the import-existence check reported spurious "JS import missing" findings on any PR touching `examples/`. Reference checks now skip `examples/` paths.
