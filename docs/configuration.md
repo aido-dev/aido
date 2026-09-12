@@ -17,6 +17,14 @@ Every command config supports:
 
 **Choosing a model:** set `model` per provider. The default provider is **Gemini**, and the default model is **`gemini-3.6-flash`** — override it with `"model": { "GEMINI": "…" }` (or switch providers). Any current Claude model works too — Opus (4.6 / 4.7 / 4.8), Fable 5, Sonnet 4.6, Haiku 4.5. Aido sends no sampling `temperature` to Claude (recent models manage it internally and reject the parameter), so the latest models work out of the box.
 
+**Fallback model (`fallbackModel`):** if the primary model fails **transiently** (rate-limit / 5xx / overload) after its retries are exhausted, Aido tries a reliable **fallback model once** before giving up — so a busy primary degrades to a working run instead of failing. Gemini ships with a built-in fallback (`gemini-2.5-flash`); customize or add one for any provider with a `fallbackModel` map:
+
+```jsonc
+{ "model": { "GEMINI": "gemini-3.6-flash" }, "fallbackModel": { "GEMINI": "gemini-2.5-flash" } }
+```
+
+Fallback only triggers on transient errors (a `4xx` like a bad key or model name fails immediately, since the fallback would fail the same way).
+
 **Diff size (`summarize` / `explain` / `docs`):** these commands truncate the PR diff to keep prompts efficient. The default budget is **60,000 characters**. Override per-repo with **`maxDiffChars`** — a positive number sets the budget; **`0`** or **`"none"`** sends the **full diff** (mind token cost and provider request-size limits on very large PRs). `review` sends the **full diff** and is unaffected.
 
 **Excluding noise files (`excludePaths`):** `review`, `summarize`, `explain`, and `docs` strip non-reviewable files from the diff before prompting — lockfiles (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, `go.sum`, `Cargo.lock`, …), minified bundles (`*.min.js`/`*.min.css`), source maps, `dist/`·`build/`·`vendor/`·`node_modules/`, snapshots, and generated files. This cuts token usage and review noise. Add your own globs via **`excludePaths`** (unioned with the built-in defaults); set **`excludeDefaults: false`** to use only your list. Excluded files are also skipped for inline suggestions.

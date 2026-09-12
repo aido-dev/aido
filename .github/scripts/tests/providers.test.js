@@ -4,11 +4,13 @@ const assert = require('node:assert/strict');
 const Module = require('node:module');
 const {
   DEFAULT_MODELS,
+  FALLBACK_MODELS,
   generate,
   generateWithGemini,
   generateWithClaude,
   generateWithOpenAICompatible,
   resolveModel,
+  resolveFallbackModel,
   isRetryable,
   withRetry,
 } = require('../lib/providers');
@@ -301,4 +303,89 @@ test('generate retries a transient Gemini 503 then returns text', async () => {
 
 test('generate still rejects unknown providers without retrying', async () => {
   await assert.rejects(generate('BOGUS', 'p', { baseDelayMs: 0 }), /Unknown provider: BOGUS/);
+});
+
+// --- primary/fallback model ---
+
+test('resolveFallbackModel: config map overrides built-in; built-in for GEMINI; none otherwise', () => {
+  assert.equal(
+    resolveFallbackModel({ fallbackModel: { GEMINI: 'gemini-x' } }, 'GEMINI'),
+    'gemini-x',
+  );
+  assert.equal(resolveFallbackModel({}, 'GEMINI'), FALLBACK_MODELS.GEMINI);
+  assert.equal(resolveFallbackModel(undefined, 'CLAUDE'), undefined);
+});
+
+test('generate falls back to the fallback model on a transient (503) failure', async () => {
+  const calls = [];
+  await withEnv({ GEMINI_API_KEY: 'k' }, () =>
+    withMockedFetch(
+      async (url) => {
+        const model = /models\/([^:]+):/.exec(String(url))[1];
+        calls.push(model);
+        if (model === 'gemini-3.6-flash')
+          return { ok: false, status: 503, statusText: 'Unavailable' };
+        return {
+          ok: true,
+          json: async () => ({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }),
+        };
+      },
+      async () => {
+        const text = await generate('GEMINI', 'p', {
+          model: 'gemini-3.6-flash',
+          fallbackModel: 'gemini-2.5-flash',
+          retries: 0,
+        });
+        assert.equal(text, 'ok');
+      },
+    ),
+  );
+  assert.ok(calls.includes('gemini-3.6-flash'), 'primary attempted');
+  assert.ok(calls.includes('gemini-2.5-flash'), 'fallback attempted');
+});
+
+test('generate does NOT fall back on a non-transient (400) failure', async () => {
+  const calls = [];
+  await withEnv({ GEMINI_API_KEY: 'k' }, () =>
+    withMockedFetch(
+      async (url) => {
+        calls.push(/models\/([^:]+):/.exec(String(url))[1]);
+        return { ok: false, status: 400, statusText: 'Bad Request' };
+      },
+      async () => {
+        await assert.rejects(
+          generate('GEMINI', 'p', {
+            model: 'gemini-3.6-flash',
+            fallbackModel: 'gemini-2.5-flash',
+            retries: 0,
+          }),
+          /HTTP 400/,
+        );
+      },
+    ),
+  );
+  assert.deepEqual(calls, ['gemini-3.6-flash']); // no fallback on a 4xx
+});
+
+test('generate uses the built-in GEMINI fallback when none is passed', async () => {
+  const calls = [];
+  await withEnv({ GEMINI_API_KEY: 'k' }, () =>
+    withMockedFetch(
+      async (url) => {
+        const model = /models\/([^:]+):/.exec(String(url))[1];
+        calls.push(model);
+        if (model === 'gemini-3.6-flash')
+          return { ok: false, status: 429, statusText: 'Too Many Requests' };
+        return {
+          ok: true,
+          json: async () => ({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }),
+        };
+      },
+      async () => {
+        const text = await generate('GEMINI', 'p', { model: 'gemini-3.6-flash', retries: 0 });
+        assert.equal(text, 'ok');
+      },
+    ),
+  );
+  assert.ok(calls.includes(FALLBACK_MODELS.GEMINI), 'built-in fallback attempted');
 });

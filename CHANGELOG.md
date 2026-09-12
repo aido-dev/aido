@@ -10,6 +10,7 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 ### ✨ New Features
 
 - **providers:** Default Gemini model is now **`gemini-3.6-flash`** (was `gemini-2.5-flash`). Updated the code default and every shipped config/example. Override anytime with `"model": { "GEMINI": "…" }`.
+- **providers:** **Primary → fallback model.** If the primary model fails **transiently** (rate-limit / 5xx / overload) after retries, Aido now tries a **reliable fallback model once** before failing — so a busy primary degrades to a working run instead of erroring. Gemini ships with a built-in fallback (`gemini-2.5-flash`); customize per provider via a **`fallbackModel`** config map. Fallback only fires on transient errors (a `4xx` fails immediately). Applies to every command.
 
 ### 🐛 Bug Fixes
 
