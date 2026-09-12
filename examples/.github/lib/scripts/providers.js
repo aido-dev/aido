@@ -187,7 +187,9 @@ async function generate(provider, prompt, opts = {}) {
   const attempt = (model) =>
     withRetry(() => dispatch({ ...providerOpts, model }), { retries, baseDelayMs, onRetry });
 
-  const primaryModel = providerOpts.model;
+  // Resolve the model so the fb-vs-primary comparison is accurate even when the
+  // caller omits `model` (the generators default the same way internally).
+  const primaryModel = providerOpts.model || DEFAULT_MODELS[provider];
   try {
     return await attempt(primaryModel);
   } catch (err) {
