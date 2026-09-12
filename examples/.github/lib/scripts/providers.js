@@ -156,24 +156,61 @@ async function generateWithClaude(prompt, { model, maxTokens = 2000, temperature
   return text;
 }
 
+// Reliable fallback model per provider, tried ONCE if the primary model fails
+// transiently (rate-limit / 5xx / overload) after its retries are exhausted —
+// so a busy primary degrades to a working review instead of failing outright.
+// Only providers with a sensible sibling are listed; override via config
+// `fallbackModel` (a provider-keyed map) or the `fallbackModel` opt.
+const FALLBACK_MODELS = {
+  GEMINI: 'gemini-2.5-flash',
+};
+
 /**
  * Dispatch to the given provider ('CHATGPT' | 'GEMINI' | 'CLAUDE' | 'OPENAI'),
  * retrying transient failures. 'OPENAI' is the generic OpenAI-compatible
  * provider — pass `baseURL` for the endpoint (DeepSeek, Kimi, Grok, …).
- * opts: { model, maxTokens, baseURL, temperature } — maxTokens applies to
- * Claude only, baseURL to OPENAI only — plus retry controls
- * { retries, baseDelayMs, onRetry }.
+ * opts: { model, fallbackModel, maxTokens, baseURL, temperature } — maxTokens
+ * applies to Claude only, baseURL to OPENAI only — plus retry controls
+ * { retries, baseDelayMs, onRetry }. If the primary `model` fails transiently
+ * after retries, `fallbackModel` (or the built-in FALLBACK_MODELS[provider]) is
+ * tried once before throwing.
  */
 async function generate(provider, prompt, opts = {}) {
-  const { retries, baseDelayMs, onRetry, ...providerOpts } = opts;
-  const call = () => {
-    if (provider === 'CHATGPT') return generateWithChatGPT(prompt, providerOpts);
-    if (provider === 'GEMINI') return generateWithGemini(prompt, providerOpts);
-    if (provider === 'CLAUDE') return generateWithClaude(prompt, providerOpts);
-    if (provider === 'OPENAI') return generateWithOpenAICompatible(prompt, providerOpts);
+  const { retries, baseDelayMs, onRetry, fallbackModel, ...providerOpts } = opts;
+  const dispatch = (po) => {
+    if (provider === 'CHATGPT') return generateWithChatGPT(prompt, po);
+    if (provider === 'GEMINI') return generateWithGemini(prompt, po);
+    if (provider === 'CLAUDE') return generateWithClaude(prompt, po);
+    if (provider === 'OPENAI') return generateWithOpenAICompatible(prompt, po);
     return Promise.reject(new Error(`Unknown provider: ${provider}`));
   };
-  return withRetry(call, { retries, baseDelayMs, onRetry });
+  const attempt = (model, attemptRetries) =>
+    withRetry(() => dispatch({ ...providerOpts, model }), {
+      retries: attemptRetries,
+      baseDelayMs,
+      onRetry,
+    });
+
+  // Resolve the model so the fb-vs-primary comparison is accurate even when the
+  // caller omits `model` (the generators default the same way internally).
+  const primaryModel = providerOpts.model || DEFAULT_MODELS[provider];
+  try {
+    return await attempt(primaryModel, retries);
+  } catch (err) {
+    const fb = fallbackModel || FALLBACK_MODELS[provider];
+    // Only fall back on transient errors (rate-limit / 5xx), and only to a
+    // *different* model — a 4xx (bad key/model/request) would fail identically.
+    if (fb && fb !== primaryModel && isRetryable(err)) {
+      console.warn(
+        `[Aido] Model '${primaryModel || '(default)'}' failed after retries (${err.message || err}); trying fallback '${fb}'.`,
+      );
+      // The fallback is tried ONCE (no retries) — the primary already exhausted
+      // its retries, and if you're globally rate-limited, retrying the sibling
+      // model just adds backoff delay before the same failure.
+      return attempt(fb, 0);
+    }
+    throw err;
+  }
 }
 
 /** Resolve the model for a provider from a config's model map, falling back to defaults. */
@@ -181,14 +218,21 @@ function resolveModel(config, provider) {
   return config?.model?.[provider] || DEFAULT_MODELS[provider];
 }
 
+/** Resolve the fallback model for a provider: config `fallbackModel` map → built-in. */
+function resolveFallbackModel(config, provider) {
+  return config?.fallbackModel?.[provider] || FALLBACK_MODELS[provider];
+}
+
 module.exports = {
   DEFAULT_MODELS,
+  FALLBACK_MODELS,
   generate,
   generateWithChatGPT,
   generateWithGemini,
   generateWithClaude,
   generateWithOpenAICompatible,
   resolveModel,
+  resolveFallbackModel,
   isRetryable,
   withRetry,
 };

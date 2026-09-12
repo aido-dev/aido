@@ -41,7 +41,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { DEFAULT_MODELS, generate } = require('../lib/providers');
+const { DEFAULT_MODELS, generate, resolveFallbackModel } = require('../lib/providers');
 const {
   SECURITY_GUARDRAIL,
   isExcludedPath,
@@ -806,8 +806,11 @@ async function main() {
 
   console.log(`Using provider: ${provider}, model: ${model}`);
 
+  // Fallback model tried once if the primary fails transiently (config
+  // `fallbackModel` map → built-in reliable fallback, e.g. Gemini).
+  const fallbackModel = resolveFallbackModel(reviewerCfg, provider);
   const callProvider = (prompt) => {
-    const opts = { model, maxTokens: 1800 };
+    const opts = { model, fallbackModel, maxTokens: 1800 };
     // ChatGPT and Gemini accept a sampling temperature; newer Claude models
     // (Opus 4.7+ / Fable 5) removed it and 400 if it's sent, so omit it there.
     if (provider === 'CHATGPT') opts.temperature = 1;
