@@ -184,14 +184,18 @@ async function generate(provider, prompt, opts = {}) {
     if (provider === 'OPENAI') return generateWithOpenAICompatible(prompt, po);
     return Promise.reject(new Error(`Unknown provider: ${provider}`));
   };
-  const attempt = (model) =>
-    withRetry(() => dispatch({ ...providerOpts, model }), { retries, baseDelayMs, onRetry });
+  const attempt = (model, attemptRetries) =>
+    withRetry(() => dispatch({ ...providerOpts, model }), {
+      retries: attemptRetries,
+      baseDelayMs,
+      onRetry,
+    });
 
   // Resolve the model so the fb-vs-primary comparison is accurate even when the
   // caller omits `model` (the generators default the same way internally).
   const primaryModel = providerOpts.model || DEFAULT_MODELS[provider];
   try {
-    return await attempt(primaryModel);
+    return await attempt(primaryModel, retries);
   } catch (err) {
     const fb = fallbackModel || FALLBACK_MODELS[provider];
     // Only fall back on transient errors (rate-limit / 5xx), and only to a
@@ -200,7 +204,10 @@ async function generate(provider, prompt, opts = {}) {
       console.warn(
         `[Aido] Model '${primaryModel || '(default)'}' failed after retries (${err.message || err}); trying fallback '${fb}'.`,
       );
-      return attempt(fb);
+      // The fallback is tried ONCE (no retries) — the primary already exhausted
+      // its retries, and if you're globally rate-limited, retrying the sibling
+      // model just adds backoff delay before the same failure.
+      return attempt(fb, 0);
     }
     throw err;
   }
