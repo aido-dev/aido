@@ -52,7 +52,7 @@ const {
 } = require('../lib/providers');
 const { getRepo, getPrNumberFromEvent, getPr, getPrFiles, postComment } = require('../lib/github');
 const { loadConfig } = require('../lib/config');
-const { truncate, buildFilesSummary, modelFooter } = require('../lib/text');
+const { SECURITY_GUARDRAIL, truncate, buildFilesSummary, modelFooter } = require('../lib/text');
 
 const CONFIG_PATH = path.join(__dirname, 'aido-suggest-config.json');
 
@@ -203,7 +203,7 @@ function buildPerFilePrompt(config, globalCtx, file) {
     `Output one or more suggestions strictly following the contract. If the diff is empty or binary, either output nothing or a single suggestion only if you can make a clear, file-specific improvement from context.`,
   ];
 
-  return fileHeader.join('\n');
+  return [SECURITY_GUARDRAIL, fileHeader.join('\n')].join('\n\n');
 }
 
 // Reformat Pass

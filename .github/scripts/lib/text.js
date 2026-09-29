@@ -6,11 +6,13 @@ const ELLIPSIS_MARKER = '\n...\n[truncated]\n...\n';
 
 /**
  * Paths that are near-universally noise in a code review — lockfiles, minified
- * bundles, source maps, build/vendor output, snapshots, and generated code.
- * Excluding them from the diff sent to the LLM cuts tokens sharply (a single
- * lockfile bump can be thousands of lines) and improves review quality.
+ * bundles, source maps, build/vendor output, snapshots, generated code, plus
+ * junk artifacts (backups, dumps, temp/swap files, logs, archives). Excluding
+ * them from the diff sent to the LLM cuts tokens sharply (a single lockfile bump
+ * can be thousands of lines) and improves review quality.
  */
 const DEFAULT_EXCLUDE_GLOBS = [
+  // lockfiles
   '**/package-lock.json',
   '**/npm-shrinkwrap.json',
   '**/yarn.lock',
@@ -21,6 +23,7 @@ const DEFAULT_EXCLUDE_GLOBS = [
   '**/poetry.lock',
   '**/Cargo.lock',
   '**/go.sum',
+  // minified / maps / build / vendor
   '**/*.min.js',
   '**/*.min.css',
   '**/*.map',
@@ -28,10 +31,30 @@ const DEFAULT_EXCLUDE_GLOBS = [
   '**/build/**',
   '**/vendor/**',
   '**/node_modules/**',
+  // snapshots / generated
   '**/__snapshots__/**',
   '**/*.snap',
   '**/*.generated.*',
   '**/*.pb.go',
+  // backups / editor / temp / swap
+  '**/*.bak',
+  '**/*.backup',
+  '**/*.orig',
+  '**/*~',
+  '**/*.tmp',
+  '**/*.swp',
+  // dumps / logs
+  '**/*.dump',
+  '**/*.sql.gz',
+  '**/*.log',
+  // archives (binary; near-useless in a diff)
+  '**/*.zip',
+  '**/*.tar',
+  '**/*.tar.gz',
+  '**/*.tgz',
+  '**/*.gz',
+  '**/*.rar',
+  '**/*.7z',
 ];
 
 // Compiled globs are cached so repeated path checks (once per changed file)
