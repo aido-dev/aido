@@ -5,6 +5,12 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
+## [Unreleased]
+
+### ✨ New Features
+
+- **all commands:** Honor a config-level **`fallbackModel`** map in **every** command (summarize, explain, docs, suggest, test, triage, digest — not just review). Since v1.6.8 the built-in Gemini fallback already applied everywhere; now the fallback is customizable per provider in each command's config. Completes the v1.6.8 primary→fallback feature.
+
 ## [v1.6.8] - 2026-09-12
 
 ### ✨ New Features

@@ -23,7 +23,12 @@
  */
 
 const path = require('path');
-const { DEFAULT_MODELS, generate, resolveModel } = require('../lib/providers');
+const {
+  DEFAULT_MODELS,
+  generate,
+  resolveModel,
+  resolveFallbackModel,
+} = require('../lib/providers');
 const {
   getRepo,
   getPrNumberFromEvent,
@@ -203,6 +208,7 @@ async function main() {
   try {
     testPlan = await generate(provider, prompt, {
       model,
+      fallbackModel: resolveFallbackModel(config, provider),
       baseURL: config.baseURL,
       maxTokens: 2000,
     });

@@ -44,7 +44,12 @@
  */
 
 const path = require('path');
-const { DEFAULT_MODELS, generate, resolveModel } = require('../lib/providers');
+const {
+  DEFAULT_MODELS,
+  generate,
+  resolveModel,
+  resolveFallbackModel,
+} = require('../lib/providers');
 const { getRepo, getPrNumberFromEvent, getPr, getPrFiles, postComment } = require('../lib/github');
 const { loadConfig } = require('../lib/config');
 const { truncate, buildFilesSummary, modelFooter } = require('../lib/text');
@@ -202,7 +207,7 @@ function buildPerFilePrompt(config, globalCtx, file) {
 }
 
 // Reformat Pass
-async function reformatToContract(provider, model, baseURL, rawText) {
+async function reformatToContract(provider, model, baseURL, fallbackModel, rawText) {
   const reformatPrompt = [
     'Reformat the following content into the exact output contract below. Return only the suggestions; no commentary.',
     OUTPUT_CONTRACT,
@@ -211,7 +216,7 @@ async function reformatToContract(provider, model, baseURL, rawText) {
     '--- END CONTENT TO REFORMAT ---',
   ].join('\n\n');
 
-  return generate(provider, reformatPrompt, { model, baseURL });
+  return generate(provider, reformatPrompt, { model, fallbackModel, baseURL });
 }
 
 // Main
@@ -225,6 +230,7 @@ async function main() {
   const config = loadConfig(CONFIG_PATH, DEFAULT_CONFIG, ['model', 'include'], 'Aido Suggest');
   const provider = (config.provider || 'GEMINI').toUpperCase();
   const model = resolveModel(config, provider);
+  const fallbackModel = resolveFallbackModel(config, provider);
   const baseURL = config.baseURL;
 
   // Build global context
@@ -244,11 +250,11 @@ async function main() {
     // Call selected provider
     let text = '';
     try {
-      text = await generate(provider, filePrompt, { model, baseURL });
+      text = await generate(provider, filePrompt, { model, fallbackModel, baseURL });
 
       // Reformat once if not compliant
       if (text && !isContractCompliant(text)) {
-        const reformatted = await reformatToContract(provider, model, baseURL, text);
+        const reformatted = await reformatToContract(provider, model, baseURL, fallbackModel, text);
         if (isContractCompliant(reformatted)) text = reformatted;
       }
 

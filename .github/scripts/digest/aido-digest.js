@@ -17,7 +17,12 @@
  */
 
 const path = require('path');
-const { DEFAULT_MODELS, generate, resolveModel } = require('../lib/providers');
+const {
+  DEFAULT_MODELS,
+  generate,
+  resolveModel,
+  resolveFallbackModel,
+} = require('../lib/providers');
 const { octokit, getRepo } = require('../lib/github');
 const { loadConfig } = require('../lib/config');
 const { modelFooter } = require('../lib/text');
@@ -238,6 +243,7 @@ async function main() {
 
   const digest = await generate(provider, prompt, {
     model,
+    fallbackModel: resolveFallbackModel(config, provider),
     baseURL: config.baseURL,
     maxTokens: 1500,
   });
