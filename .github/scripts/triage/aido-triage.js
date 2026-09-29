@@ -26,7 +26,7 @@ const {
 } = require('../lib/providers');
 const { octokit, getRepo, getIssueNumberFromEvent, postComment } = require('../lib/github');
 const { loadConfig } = require('../lib/config');
-const { truncateTail } = require('../lib/text');
+const { SECURITY_GUARDRAIL, truncateTail } = require('../lib/text');
 
 const CONFIG_PATH = path.join(__dirname, 'aido-triage-config.json');
 
@@ -140,7 +140,7 @@ The "labels" array MUST be a subset of the allowed candidate labels. If you assi
     parts.push(`Additional instructions:\n${config.additionalInstructions}`);
   }
 
-  return parts.join('\n\n');
+  return [SECURITY_GUARDRAIL, parts.join('\n\n')].join('\n\n');
 }
 
 /**

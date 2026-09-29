@@ -34,6 +34,7 @@ const {
 } = require('../lib/github');
 const { loadConfig } = require('../lib/config');
 const {
+  SECURITY_GUARDRAIL,
   truncate,
   resolveDiffLimit,
   filterDiffByPath,
@@ -130,7 +131,7 @@ function buildPrompt(config, context) {
     });
   }
 
-  return sections.join('\n\n');
+  return [SECURITY_GUARDRAIL, sections.join('\n\n')].join('\n\n');
 }
 
 /**

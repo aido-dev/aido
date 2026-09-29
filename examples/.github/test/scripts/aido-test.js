@@ -38,7 +38,13 @@ const {
   postComment,
 } = require('../lib/github');
 const { loadConfig } = require('../lib/config');
-const { truncate, buildFilesSummary, fillTemplate, modelFooter } = require('../lib/text');
+const {
+  SECURITY_GUARDRAIL,
+  truncate,
+  buildFilesSummary,
+  fillTemplate,
+  modelFooter,
+} = require('../lib/text');
 
 const CONFIG_PATH = path.join(__dirname, 'aido-test-config.json');
 
@@ -170,7 +176,7 @@ Requirements:
     });
   }
 
-  return parts.join('\n\n');
+  return [SECURITY_GUARDRAIL, parts.join('\n\n')].join('\n\n');
 }
 
 /**

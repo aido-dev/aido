@@ -92,6 +92,25 @@ test('isExcludedPath matches lockfiles/minified/build, not source', () => {
   assert.equal(isExcludedPath('lib/text.js', g), false);
 });
 
+test('isExcludedPath also excludes junk artifacts (backups/dumps/logs/archives)', () => {
+  const g = DEFAULT_EXCLUDE_GLOBS;
+  for (const p of [
+    'db.dump',
+    'server.log',
+    'app.js.bak',
+    'config.orig',
+    'notes~',
+    'x.tmp',
+    'release.tar.gz',
+    'backup.zip',
+    'data.sql.gz',
+  ]) {
+    assert.equal(isExcludedPath(p, g), true, `should exclude ${p}`);
+  }
+  assert.equal(isExcludedPath('src/logger.ts', g), false); // not a .log
+  assert.equal(isExcludedPath('src/index.ts', g), false);
+});
+
 test('resolveExcludeGlobs unions defaults with excludePaths, or replaces when excludeDefaults=false', () => {
   assert.ok(resolveExcludeGlobs({}).includes('**/package-lock.json'));
   const withExtra = resolveExcludeGlobs({ excludePaths: ['**/*.csv'] });
