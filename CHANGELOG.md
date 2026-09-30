@@ -5,7 +5,7 @@ This project follows [Semantic Versioning](https://semver.org/) and uses Convent
 
 ---
 
-## [Unreleased]
+## [v1.6.9] - 2026-09-30
 
 ### ✨ New Features
 
