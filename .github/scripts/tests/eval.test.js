@@ -7,6 +7,8 @@ const { cases, evalPersonas, toAddDiff } = require('../eval/cases');
 test('anyMatch returns true when any pattern matches', () => {
   assert.equal(anyMatch('has SQL injection', [/injection/i]), true);
   assert.equal(anyMatch('nothing here', [/injection/i, /secret/i]), false);
+  assert.equal(anyMatch('anything', []), false); // empty/undefined anyOf never matches
+  assert.equal(anyMatch('anything', undefined), false);
 });
 
 test('evaluateCase scores caught findings and passes at/above threshold', () => {

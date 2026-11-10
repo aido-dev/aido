@@ -33,6 +33,10 @@ async function main() {
   console.log(`\n🧪 Aido prompt eval — provider=${provider} model=${model}\n`);
 
   const results = [];
+  // Intentionally sequential: running cases concurrently would hammer one
+  // provider/key and risk rate-limits (429), which would trigger the fallback
+  // model mid-run and corrupt the eval (you'd be scoring the wrong model).
+  // Case counts are small; accuracy beats speed here.
   for (const c of cases) {
     const context = {
       prTitle: c.prTitle,

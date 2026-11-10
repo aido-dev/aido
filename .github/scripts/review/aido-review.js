@@ -619,13 +619,15 @@ function resolveJsImportPath(baseDir, spec) {
 }
 
 /**
- * Whether a path is a template copy under `examples/`. Those files import
- * `../lib/*` (etc.) that only resolve once dropped into a real repo's
- * `.github/scripts/`, so reference-existence checks would always false-positive
- * on them. Skip ref checks for such paths.
+ * Whether a path holds illustrative/fixture imports that aren't meant to resolve
+ * in-tree — `examples/` template copies (import `../lib/*`, resolve only once
+ * installed) and the eval harness's golden cases (`scripts/eval/`, which embed
+ * sample code with `require(...)` as strings). Reference-existence checks would
+ * always false-positive on these, so skip them.
  */
 function isTemplateRefPath(filename) {
-  return /(?:^|\/)examples\//.test(filename || '');
+  const f = filename || '';
+  return /(?:^|\/)examples\//.test(f) || /\/scripts\/eval\//.test(f);
 }
 
 async function collectContextChecks(owner, repo, context, files, reviewerCfg) {
