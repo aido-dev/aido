@@ -1,0 +1,41 @@
+# Prompt Eval — internal dev tooling (NOT a command adopters run).
+# Runs the prompt-eval harness against the golden cases with the repo's provider
+# keys, so prompt changes can be validated with evidence. Manual dispatch only.
+name: Prompt Eval
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: 'Provider (GEMINI | CHATGPT | CLAUDE | OPENAI)'
+        required: false
+        default: 'GEMINI'
+        type: string
+      model:
+        description: 'Model id (optional — defaults to the provider default)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    name: Prompt eval
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts --no-audit --no-fund openai@7.4.0 @octokit/rest@22.0.1 @google/generative-ai@0.24.1 @anthropic-ai/sdk@0.117.1
+      - name: Run prompt eval
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHATGPT_API_KEY: ${{ secrets.CHATGPT_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AIDO_PROVIDER: ${{ inputs.provider }}
+          AIDO_MODEL: ${{ inputs.model }}
+        run: node .github/scripts/eval/run-eval.js
