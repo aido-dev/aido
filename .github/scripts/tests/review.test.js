@@ -370,10 +370,15 @@ test('reviewEventFromBody: unrecognized/missing recommendation falls back to COM
 
 // --- isTemplateRefPath (context-check false-positive fix) ---
 
-test('isTemplateRefPath flags examples/ template copies, not real scripts', () => {
+test('isTemplateRefPath flags examples/ + eval fixtures, not real scripts', () => {
   assert.equal(isTemplateRefPath('examples/.github/review/scripts/aido-review.js'), true);
   assert.equal(isTemplateRefPath('some/nested/examples/x.js'), true);
+  assert.equal(isTemplateRefPath('.github/scripts/eval/cases.js'), true); // fixtures as strings
   assert.equal(isTemplateRefPath('.github/scripts/review/aido-review.js'), false);
   assert.equal(isTemplateRefPath('src/examplesData.js'), false); // not an examples/ dir
+  // Eval match is anchored to THIS repo's path — an adopter PR with its own
+  // scripts/eval/ dir must still get its reference checks (no false suppression):
+  assert.equal(isTemplateRefPath('backend/scripts/eval/run.py'), false);
+  assert.equal(isTemplateRefPath('scripts/eval/thing.js'), false);
   assert.equal(isTemplateRefPath(''), false);
 });

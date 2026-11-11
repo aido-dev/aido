@@ -41,7 +41,12 @@
 
 const fs = require('fs');
 const path = require('path');
-const { DEFAULT_MODELS, generate, resolveFallbackModel } = require('../lib/providers');
+const {
+  DEFAULT_MODELS,
+  generate,
+  resolveFallbackModel,
+  defaultCallOpts,
+} = require('../lib/providers');
 const {
   SECURITY_GUARDRAIL,
   isExcludedPath,
@@ -619,13 +624,18 @@ function resolveJsImportPath(baseDir, spec) {
 }
 
 /**
- * Whether a path is a template copy under `examples/`. Those files import
- * `../lib/*` (etc.) that only resolve once dropped into a real repo's
- * `.github/scripts/`, so reference-existence checks would always false-positive
- * on them. Skip ref checks for such paths.
+ * Whether a path holds illustrative/fixture imports that aren't meant to resolve
+ * in-tree — `examples/` template copies (import `../lib/*`, resolve only once
+ * installed) and *this repo's* eval harness golden cases
+ * (`.github/scripts/eval/`, which embed sample code with `require(...)` as
+ * strings). Reference-existence checks would always false-positive on these, so
+ * skip them. The eval match is anchored to `.github/scripts/eval/` so it can't
+ * suppress ref checks on an adopter PR that merely has some `scripts/eval/`
+ * directory of its own.
  */
 function isTemplateRefPath(filename) {
-  return /(?:^|\/)examples\//.test(filename || '');
+  const f = filename || '';
+  return /(?:^|\/)examples\//.test(f) || /(?:^|\/)\.github\/scripts\/eval\//.test(f);
 }
 
 async function collectContextChecks(owner, repo, context, files, reviewerCfg) {
@@ -809,15 +819,13 @@ async function main() {
   // Fallback model tried once if the primary fails transiently (config
   // `fallbackModel` map → built-in reliable fallback, e.g. Gemini).
   const fallbackModel = resolveFallbackModel(reviewerCfg, provider);
-  const callProvider = (prompt) => {
-    const opts = { model, fallbackModel, maxTokens: 1800 };
-    // ChatGPT and Gemini accept a sampling temperature; newer Claude models
-    // (Opus 4.7+ / Fable 5) removed it and 400 if it's sent, so omit it there.
-    if (provider === 'CHATGPT') opts.temperature = 1;
-    else if (provider === 'GEMINI') opts.temperature = 0.2;
-    else if (provider === 'OPENAI') opts.baseURL = reviewerCfg.baseURL;
-    return generate(provider, prompt, opts);
-  };
+  const callProvider = (prompt) =>
+    generate(provider, prompt, {
+      model,
+      fallbackModel,
+      maxTokens: 1800,
+      ...defaultCallOpts(provider, reviewerCfg.baseURL),
+    });
 
   // The consolidated review and the inline-suggestions pass are independent
   // (neither uses the other's output), so run them concurrently to roughly

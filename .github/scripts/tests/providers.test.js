@@ -11,6 +11,7 @@ const {
   generateWithOpenAICompatible,
   resolveModel,
   resolveFallbackModel,
+  defaultCallOpts,
   isRetryable,
   withRetry,
 } = require('../lib/providers');
@@ -388,4 +389,32 @@ test('generate uses the built-in GEMINI fallback when none is passed', async () 
     ),
   );
   assert.ok(calls.includes(FALLBACK_MODELS.GEMINI), 'built-in fallback attempted');
+});
+
+test('generate with fallbackModel:false does NOT fall back on a transient failure', async () => {
+  const calls = [];
+  await withEnv({ GEMINI_API_KEY: 'k' }, () =>
+    withMockedFetch(
+      async (url) => {
+        calls.push(/models\/([^:]+):/.exec(String(url))[1]);
+        return { ok: false, status: 503, statusText: 'Unavailable' };
+      },
+      async () => {
+        await assert.rejects(
+          generate('GEMINI', 'p', { model: 'gemini-3.6-flash', fallbackModel: false, retries: 0 }),
+          /HTTP 503/,
+        );
+      },
+    ),
+  );
+  assert.deepEqual(calls, ['gemini-3.6-flash']); // fallback disabled → no second attempt
+});
+
+test('defaultCallOpts: temperature per provider; baseURL for OPENAI; nothing for Claude', () => {
+  assert.deepEqual(defaultCallOpts('CHATGPT'), { temperature: 1 });
+  assert.deepEqual(defaultCallOpts('GEMINI'), { temperature: 0.2 });
+  assert.deepEqual(defaultCallOpts('CLAUDE'), {});
+  assert.deepEqual(defaultCallOpts('OPENAI', 'https://api.deepseek.com'), {
+    baseURL: 'https://api.deepseek.com',
+  });
 });
