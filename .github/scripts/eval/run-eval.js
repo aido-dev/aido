@@ -22,10 +22,15 @@ const { evaluateCase, summarize } = require('./evaluate');
 function providerOpts(provider, model) {
   // fallbackModel:false — the eval must score the EXACT model requested. A 429
   // on the primary should fail (re-run it), not silently fall back to a sibling
-  // and attribute its output to the requested model. Mirrors review's call opts.
+  // and attribute its output to the requested model.
+  //
+  // maxTokens:1800 mirrors review's callProvider exactly — scoring Claude at a
+  // different token budget (its SDK default is 2000) would measure a different
+  // truncation point than production and make the eval unfaithful.
   return {
     model,
     fallbackModel: false,
+    maxTokens: 1800,
     ...defaultCallOpts(provider, process.env.AIDO_BASE_URL),
   };
 }
@@ -33,6 +38,15 @@ function providerOpts(provider, model) {
 async function main() {
   const provider = (process.env.AIDO_PROVIDER || 'GEMINI').toUpperCase();
   const model = process.env.AIDO_MODEL || resolveModel({}, provider);
+  // OPENAI (generic OpenAI-compatible) has no built-in default model, so an
+  // unset AIDO_MODEL leaves it undefined — fail loudly instead of sending
+  // `model: undefined` and attributing the result to "undefined".
+  if (!model) {
+    console.error(
+      `No model for provider=${provider}. Set AIDO_MODEL (OPENAI has no default model).`,
+    );
+    process.exit(1);
+  }
   console.log(`\n🧪 Aido prompt eval — provider=${provider} model=${model}\n`);
 
   const results = [];

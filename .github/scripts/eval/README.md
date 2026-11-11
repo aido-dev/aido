@@ -28,7 +28,7 @@ It prints a per-case scorecard and exits non-zero if any case fails.
 🧪 Aido prompt eval — provider=GEMINI model=gemini-3.6-flash
 
   ✓ planted-vulns (user-service.js): caught 5/5 (100%, threshold 80%)
-  ✓ clean-code (generateToken): caught 0/0 (100%, threshold 100%)
+  ✓ clean-code (generateToken): caught 1/1 (100%, threshold 100%)
 
 ✅ PASS — 2/2 cases, avg score 100%
 ```

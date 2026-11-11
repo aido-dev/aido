@@ -75,6 +75,41 @@ test('summarize aggregates pass/fail across cases', () => {
   assert.ok(Math.abs(s.avgScore - 0.7) < 1e-9);
 });
 
+test('summarize([]) is a FAIL, not a vacuous pass', () => {
+  const s = summarize([]);
+  assert.equal(s.total, 0);
+  assert.equal(s.passed, 0);
+  assert.equal(s.pass, false); // no cases ran → broken runner, not success
+  assert.equal(s.avgScore, 0);
+});
+
+// --- the golden-case regexes resist known false matches ---
+
+test('clean-case approve signal requires a clean Approve recommendation', () => {
+  const clean = cases.find((c) => /clean/i.test(c.name));
+  const rx = clean.expect.find((e) => e.id === 'approves-clean-code').anyOf;
+  const match = (t) => rx.some((r) => r.test(t));
+
+  assert.equal(match('Recommendation: Approve'), true);
+  assert.equal(match('**Recommendation:** Approve ✅'), true);
+  // "Approve with minor changes" is COMMENT in production, not APPROVE:
+  assert.equal(match('Recommendation: Approve with minor changes'), false);
+  assert.equal(match('Recommendation: Approve (minor nit below)'), false);
+  // Negated prose must not count as an approval:
+  assert.equal(match('Recommendation: Do not approve — SQL injection present'), false);
+});
+
+test('error-handling signal is not a freebie for echoing the persona mandate', () => {
+  const buggy = cases.find((c) => /planted/i.test(c.name));
+  const rx = buggy.expect.find((e) => e.id === 'error-handling').anyOf;
+  const match = (t) => rx.some((r) => r.test(t));
+
+  // Merely restating the persona's "missing error handling" mandate must NOT score:
+  assert.equal(match('I reviewed for missing error handling and found none.'), false);
+  // A specific, real observation still scores:
+  assert.equal(match('The db error is ignored and rows[0] is unchecked.'), true);
+});
+
 // --- golden cases are well-formed ---
 
 test('golden cases are structurally valid', () => {

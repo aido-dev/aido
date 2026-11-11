@@ -107,8 +107,11 @@ const cases = [
       {
         id: 'error-handling',
         desc: 'ignored db error / unguarded rows[0]',
+        // NB: no bare /error handling/i — the persona literally says "missing
+        // error handling", so a model restating its mandate would score a free
+        // "catch" without actually spotting the ignored `err` / unguarded
+        // rows[0]. Require a specific signal instead.
         anyOf: [
-          /error handling/i,
           /unhandled/i,
           /\bswallow/i,
           /\berr(or)?\b[^.\n]{0,40}\b(ignored|unchecked|not checked|dropped|discarded)\b/i,
@@ -131,14 +134,21 @@ const cases = [
     prBody: 'A small helper using crypto.randomBytes with input validation.',
     threshold: 1,
     // Robust signal that the review didn't fabricate serious bugs on clean code:
-    // it recommends Approve. (Keyword "must-not" guards were fragile — an
-    // approving mention like "uses randomBytes, not weak Math.random" tripped
-    // them; checking the recommendation avoids that false failure.)
+    // its Recommendation line is a clean Approve. (Keyword "must-not" guards were
+    // fragile — an approving mention like "uses randomBytes, not weak
+    // Math.random" tripped them; checking the recommendation avoids that false
+    // failure.)
+    //
+    // Anchored to the "Recommendation:" line and requiring a *clean* approve —
+    // the negative lookahead rejects "Approve with minor changes" / nits (which
+    // production maps to COMMENT, not APPROVE) and "do not approve" prose. This
+    // mirrors reviewEventFromBody()'s APPROVE rule in aido-review.js; keep the
+    // two in sync.
     expect: [
       {
         id: 'approves-clean-code',
-        desc: 'recommends Approve (no fabricated findings)',
-        anyOf: [/recommendation:?\**\s*approv/i, /recommend\w*[^.\n]{0,20}approv/i],
+        desc: 'Recommendation line is a clean Approve (no fabricated findings)',
+        anyOf: [/recommendation:?\**\s*approve\b(?![^\n]*\b(?:minor|nit|with)\b)/i],
       },
     ],
     mustNot: [],

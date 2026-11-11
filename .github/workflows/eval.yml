@@ -12,7 +12,7 @@ on:
         default: 'GEMINI'
         type: string
       model:
-        description: 'Model id (optional — defaults to the provider default)'
+        description: 'Model id (optional for GEMINI/CHATGPT/CLAUDE — required for OPENAI, which has no default)'
         required: false
         type: string
       base_url:

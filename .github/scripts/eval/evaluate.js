@@ -63,8 +63,10 @@ function summarize(results) {
     passed,
     failed: results.length - passed,
     total: results.length,
-    pass: results.every((r) => r.pass),
-    avgScore: results.length ? results.reduce((s, r) => s + r.score, 0) / results.length : 1,
+    // An empty run is a FAIL, not a vacuous pass — "0/0 cases ✅" would hide a
+    // broken runner (no cases loaded, all calls threw) behind a green check.
+    pass: results.length > 0 && results.every((r) => r.pass),
+    avgScore: results.length ? results.reduce((s, r) => s + r.score, 0) / results.length : 0,
   };
 }
 
