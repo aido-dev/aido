@@ -107,7 +107,13 @@ const cases = [
       {
         id: 'error-handling',
         desc: 'ignored db error / unguarded rows[0]',
-        anyOf: [/error handling/i, /\berr\b/, /unhandled/i, /swallow/i, /not checked/i],
+        anyOf: [
+          /error handling/i,
+          /unhandled/i,
+          /\bswallow/i,
+          /\berr(or)?\b[^.\n]{0,40}\b(ignored|unchecked|not checked|dropped|discarded)\b/i,
+          /\b(ignored|unchecked|unhandled)\b[^.\n]{0,40}\berror/i,
+        ],
       },
       {
         id: 'auth-or-race',
@@ -123,25 +129,19 @@ const cases = [
     content: CLEAN,
     prTitle: 'Add secure token generator',
     prBody: 'A small helper using crypto.randomBytes with input validation.',
-    threshold: 1, // nothing to catch; this is purely a false-positive guard
-    expect: [],
-    mustNot: [
+    threshold: 1,
+    // Robust signal that the review didn't fabricate serious bugs on clean code:
+    // it recommends Approve. (Keyword "must-not" guards were fragile — an
+    // approving mention like "uses randomBytes, not weak Math.random" tripped
+    // them; checking the recommendation avoids that false failure.)
+    expect: [
       {
-        id: 'no-false-sqli',
-        desc: 'must not claim SQL injection',
-        anyOf: [/sql injection/i],
-      },
-      {
-        id: 'no-false-secret',
-        desc: 'must not claim a hardcoded secret',
-        anyOf: [/hardcoded\s+(secret|credential|api[_ -]?key)/i],
-      },
-      {
-        id: 'no-false-weak-crypto',
-        desc: 'must not claim weak randomness (it uses randomBytes)',
-        anyOf: [/weak.{0,20}random/i, /math\.random/i],
+        id: 'approves-clean-code',
+        desc: 'recommends Approve (no fabricated findings)',
+        anyOf: [/recommendation:?\**\s*approv/i, /recommend\w*[^.\n]{0,20}approv/i],
       },
     ],
+    mustNot: [],
   },
 ];
 

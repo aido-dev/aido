@@ -15,6 +15,10 @@ on:
         description: 'Model id (optional — defaults to the provider default)'
         required: false
         type: string
+      base_url:
+        description: 'Endpoint URL (required for provider OPENAI, e.g. https://api.deepseek.com)'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -38,4 +42,5 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           AIDO_PROVIDER: ${{ inputs.provider }}
           AIDO_MODEL: ${{ inputs.model }}
+          AIDO_BASE_URL: ${{ inputs.base_url }}
         run: node .github/scripts/eval/run-eval.js

@@ -15,16 +15,19 @@
  */
 
 const { makeConsolidatedPrompt } = require('../review/aido-review');
-const { generate, resolveModel, resolveFallbackModel } = require('../lib/providers');
+const { generate, resolveModel, defaultCallOpts } = require('../lib/providers');
 const { cases, evalPersonas, toAddDiff } = require('./cases');
 const { evaluateCase, summarize } = require('./evaluate');
 
 function providerOpts(provider, model) {
-  const opts = { model, fallbackModel: resolveFallbackModel({}, provider) };
-  if (provider === 'CHATGPT') opts.temperature = 1;
-  else if (provider === 'GEMINI') opts.temperature = 0.2;
-  else if (provider === 'OPENAI') opts.baseURL = process.env.AIDO_BASE_URL;
-  return opts;
+  // fallbackModel:false — the eval must score the EXACT model requested. A 429
+  // on the primary should fail (re-run it), not silently fall back to a sibling
+  // and attribute its output to the requested model. Mirrors review's call opts.
+  return {
+    model,
+    fallbackModel: false,
+    ...defaultCallOpts(provider, process.env.AIDO_BASE_URL),
+  };
 }
 
 async function main() {

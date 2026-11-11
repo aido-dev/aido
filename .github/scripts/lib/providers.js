@@ -173,7 +173,8 @@ const FALLBACK_MODELS = {
  * applies to Claude only, baseURL to OPENAI only — plus retry controls
  * { retries, baseDelayMs, onRetry }. If the primary `model` fails transiently
  * after retries, `fallbackModel` (or the built-in FALLBACK_MODELS[provider]) is
- * tried once before throwing.
+ * tried once before throwing. Pass `fallbackModel: false` to disable the
+ * fallback entirely (e.g. an eval that must score the exact model requested).
  */
 async function generate(provider, prompt, opts = {}) {
   const { retries, baseDelayMs, onRetry, fallbackModel, ...providerOpts } = opts;
@@ -197,7 +198,8 @@ async function generate(provider, prompt, opts = {}) {
   try {
     return await attempt(primaryModel, retries);
   } catch (err) {
-    const fb = fallbackModel || FALLBACK_MODELS[provider];
+    // `fallbackModel: false` disables the fallback; undefined uses the built-in.
+    const fb = fallbackModel === false ? undefined : fallbackModel || FALLBACK_MODELS[provider];
     // Only fall back on transient errors (rate-limit / 5xx), and only to a
     // *different* model — a 4xx (bad key/model/request) would fail identically.
     if (fb && fb !== primaryModel && isRetryable(err)) {
@@ -223,6 +225,20 @@ function resolveFallbackModel(config, provider) {
   return config?.fallbackModel?.[provider] || FALLBACK_MODELS[provider];
 }
 
+/**
+ * Default per-provider call options: ChatGPT/Gemini accept a sampling
+ * `temperature`; Claude (Opus 4.7+ / Fable 5) rejects it so it's omitted; OPENAI
+ * needs a `baseURL`. Single source of truth so callers (review, eval, …) call
+ * the model identically.
+ */
+function defaultCallOpts(provider, baseURL) {
+  const opts = {};
+  if (provider === 'CHATGPT') opts.temperature = 1;
+  else if (provider === 'GEMINI') opts.temperature = 0.2;
+  else if (provider === 'OPENAI') opts.baseURL = baseURL;
+  return opts;
+}
+
 module.exports = {
   DEFAULT_MODELS,
   FALLBACK_MODELS,
@@ -233,6 +249,7 @@ module.exports = {
   generateWithOpenAICompatible,
   resolveModel,
   resolveFallbackModel,
+  defaultCallOpts,
   isRetryable,
   withRetry,
 };

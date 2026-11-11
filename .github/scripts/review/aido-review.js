@@ -41,7 +41,12 @@
 
 const fs = require('fs');
 const path = require('path');
-const { DEFAULT_MODELS, generate, resolveFallbackModel } = require('../lib/providers');
+const {
+  DEFAULT_MODELS,
+  generate,
+  resolveFallbackModel,
+  defaultCallOpts,
+} = require('../lib/providers');
 const {
   SECURITY_GUARDRAIL,
   isExcludedPath,
@@ -811,15 +816,13 @@ async function main() {
   // Fallback model tried once if the primary fails transiently (config
   // `fallbackModel` map → built-in reliable fallback, e.g. Gemini).
   const fallbackModel = resolveFallbackModel(reviewerCfg, provider);
-  const callProvider = (prompt) => {
-    const opts = { model, fallbackModel, maxTokens: 1800 };
-    // ChatGPT and Gemini accept a sampling temperature; newer Claude models
-    // (Opus 4.7+ / Fable 5) removed it and 400 if it's sent, so omit it there.
-    if (provider === 'CHATGPT') opts.temperature = 1;
-    else if (provider === 'GEMINI') opts.temperature = 0.2;
-    else if (provider === 'OPENAI') opts.baseURL = reviewerCfg.baseURL;
-    return generate(provider, prompt, opts);
-  };
+  const callProvider = (prompt) =>
+    generate(provider, prompt, {
+      model,
+      fallbackModel,
+      maxTokens: 1800,
+      ...defaultCallOpts(provider, reviewerCfg.baseURL),
+    });
 
   // The consolidated review and the inline-suggestions pass are independent
   // (neither uses the other's output), so run them concurrently to roughly
